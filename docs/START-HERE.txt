@@ -1,0 +1,62 @@
+PIPET
+Your voice, wherever you type.
+Made by vietbrosinaus
+
+INSTALL
+1. Open the DMG and drag Pipet into Applications.
+2. Eject the DMG, then open Pipet from Applications.
+3. Follow the macOS confirmation prompt to open Pipet.
+   Preview builds that are not notarized may require Open Anyway under
+   System Settings > Privacy & Security.
+4. Pipet lives in the menu bar. Click its speech-bubble icon to open it.
+
+BEFORE YOU DICTATE
+- macOS 14 or later, Apple silicon or Intel Mac.
+- An internet connection.
+- Install Codex CLI and sign in using your own account.
+  Instructions: https://developers.openai.com/codex/cli/
+  In Terminal: npm install -g @openai/codex
+  Then: codex login
+  Node.js/npm are required for this installation route; follow the linked
+  instructions if you need to install them first.
+- In Pipet, allow Microphone and enable Pipet under
+  System Settings > Privacy & Security > Accessibility.
+
+DICTATE
+Click a text field. Hold Control-M, speak, and release.
+Most editable text fields accept insertion. Secure fields and apps that
+block Accessibility or paste may require manual entry.
+Use Pipet's practice field to try it out.
+If insertion fails or you switch apps during transcription, use
+Copy Last Transcript in the menu bar or Copy in the Pipet window.
+Pipet never automatically sends a message or submits a form.
+
+IF YOU USED CODEX VOICE BEFORE
+Quit Codex Voice before opening Pipet. They share the Control-M shortcut.
+Pipet has a new app identity, so grant permissions to Pipet itself.
+
+IF THE ACCESSIBILITY SWITCH IS ON BUT INSERTION IS BLOCKED
+Quit Pipet. Remove its old entry from Accessibility with the minus button,
+then add the installed Applications/Pipet.app with the plus button and
+turn it on. Reopen Pipet. This can happen after replacing a local build.
+
+PRIVACY
+The app reads your local Codex authentication to use your own account.
+Audio is sent to OpenAI after you release the shortcut.
+Temporary recordings are deleted after each transcription attempt.
+The latest transcript stays in memory until you quit.
+No account credentials or recordings are bundled in this download.
+
+LIMITATIONS
+Pipet uses an experimental, undocumented Codex transcription endpoint.
+It works in current testing but may change or stop being available.
+Codex sign-in, account access, and macOS permissions are required.
+Apple silicon has been tested here. Intel is compiled into the app but
+has not been tested on a physical Intel Mac.
+Signing and notarization depend on the release. Use the latest
+Apple-notarized download when sharing Pipet.
+
+CREDITS
+Built on Codex Voice by Anthony Kroeger (anthnykr), the GOAT:
+https://github.com/anthnykr/codex-voice
+Distributed under the MIT license included alongside this file.

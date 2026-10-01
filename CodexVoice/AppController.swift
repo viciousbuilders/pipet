@@ -27,15 +27,24 @@ final class AppController {
         }
     )
 
+    func openWindow() { statusItemController.openSettings() }
+    func stop() { audioCaptureService.cancel() }
+
     func start() {
         DebugLogger.clear()
         DebugLogger.write("App start")
         statusItemController.start()
         dictationController.onStateChange = { [weak self] state in
             DebugLogger.write("State changed: \(state.statusText)")
+            PipetModel.shared.state = state
+            PipetModel.shared.lastTranscript = self?.dictationController.lastTranscript
             self?.statusItemController.handleStateChange(state)
             self?.hudController.update(for: state)
         }
         hotkeyMonitor.start()
+        if !UserDefaults.standard.bool(forKey: "hasOpenedSetup") {
+            statusItemController.openSettings()
+            UserDefaults.standard.set(true, forKey: "hasOpenedSetup")
+        }
     }
 }

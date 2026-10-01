@@ -27,6 +27,7 @@ final class AudioCaptureService {
     private var recorder: AVAudioRecorder?
     private var currentRecordingURL: URL?
     private var recordingStartedAt: Date?
+    private var recordingFiles = Set<URL>()
 
     init(permissionCoordinator: PermissionCoordinator) {
         self.permissionCoordinator = permissionCoordinator
@@ -44,6 +45,7 @@ final class AudioCaptureService {
             .appendingPathComponent("codex-voice-\(UUID().uuidString)")
             .appendingPathExtension("wav")
 
+        recordingFiles.insert(recordingURL)
         let settings: [String: Any] = [
             AVFormatIDKey: kAudioFormatLinearPCM,
             AVSampleRateKey: 44_100,
@@ -53,11 +55,18 @@ final class AudioCaptureService {
             AVLinearPCMIsFloatKey: false,
         ]
 
-        let recorder = try AVAudioRecorder(url: recordingURL, settings: settings)
+        let recorder: AVAudioRecorder
+        do {
+            recorder = try AVAudioRecorder(url: recordingURL, settings: settings)
+        } catch {
+            deleteFile(at: recordingURL)
+            throw error
+        }
         recorder.isMeteringEnabled = true
 
         guard recorder.record() else {
             DebugLogger.write("Recorder failed to start")
+            deleteFile(at: recordingURL)
             throw AudioCaptureError.recorderUnavailable
         }
 
@@ -97,9 +106,7 @@ final class AudioCaptureService {
         recorder?.stop()
         DebugLogger.write("Recording cancelled")
 
-        if let currentRecordingURL {
-            deleteFile(at: currentRecordingURL)
-        }
+        for url in recordingFiles { deleteFile(at: url) }
 
         recorder = nil
         currentRecordingURL = nil
@@ -113,5 +120,6 @@ final class AudioCaptureService {
 
     private func deleteFile(at url: URL) {
         try? FileManager.default.removeItem(at: url)
+        recordingFiles.remove(url)
     }
 }

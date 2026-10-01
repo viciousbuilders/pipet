@@ -8,7 +8,7 @@ actor DebugLogger {
         let directoryURL = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library")
             .appendingPathComponent("Logs")
-        return directoryURL.appendingPathComponent("CodexVoice.log")
+        return directoryURL.appendingPathComponent("Pipet.log")
     }()
 
     func log(_ message: String) {
@@ -32,7 +32,7 @@ actor DebugLogger {
                 try Data(line.utf8).write(to: logURL, options: .atomic)
             }
         } catch {
-            print("CodexVoice log write failed: \(error.localizedDescription)")
+            print("Pipet log write failed: \(error.localizedDescription)")
         }
     }
 

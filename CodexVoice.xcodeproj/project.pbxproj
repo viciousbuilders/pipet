@@ -21,6 +21,13 @@
 		C4D7DFBB092131A395C903A2 /* PermissionCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10EF0C95428B8360626F791E /* PermissionCoordinator.swift */; };
 		C50B54C4D812C86CB2E93FDC /* DictationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FACB80EE4AFAD35045286323 /* DictationController.swift */; };
 		C80EE48CC64C3AD2B4EA91F5 /* TextInsertionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53FD4ECFE105D8FDF87FADBF /* TextInsertionService.swift */; };
+		84B79504FAFF57F17B29EB64 /* PipetModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A449C6F4E2EA2A8AE6524F3 /* PipetModel.swift */; };
+		0A5599A1A90BAC6BC4E5DFD6 /* PipetPreferencesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D615B09DD18BFCCE31C60763 /* PipetPreferencesView.swift */; };
+		FE53CD53E5F639ACEAEC03D9 /* PipetSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA618BAAC22A3A257A668462 /* PipetSetupView.swift */; };
+		6BBF088D2938F39B38643A9D /* PipetTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 586991A63FA5C98A48814F16 /* PipetTheme.swift */; };
+		7A9D8242E522F8B9B6BB1494 /* PipetLogo.png in Resources */ = {isa = PBXBuildFile; fileRef = A1927FD80381775CCF1212B3 /* PipetLogo.png */; };
+		EC6D2D62B2B0452CB90DE566 /* Pipet.icns in Resources */ = {isa = PBXBuildFile; fileRef = 7B8C9C10E0D4A27C7C2E5A5D /* Pipet.icns */; };
+		F2E65DBEE3F4F759D6DD32C5 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 543E3AFC6BE37C56D366F049 /* LICENSE */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -34,12 +41,19 @@
 		7EFE4C6952837C4032D11A8B /* CodexVoiceApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexVoiceApp.swift; sourceTree = "<group>"; };
 		7FA4D053C6E1B2EA17A841E5 /* AudioCaptureService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioCaptureService.swift; sourceTree = "<group>"; };
 		83DEC7FE6CBBA4C61FC51A9A /* DictationHUDController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationHUDController.swift; sourceTree = "<group>"; };
-		87FACEEF047E5F10A97E8271 /* CodexVoice.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CodexVoice.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		87FACEEF047E5F10A97E8271 /* CodexVoice.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Pipet.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BAF471D15D3162DBE5D4DE16 /* DebugLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugLogger.swift; sourceTree = "<group>"; };
 		CC79762AD0BFD383088560CC /* StatusItemController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusItemController.swift; sourceTree = "<group>"; };
 		D2BEB01570D704BD5D727337 /* CodexAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexAuthService.swift; sourceTree = "<group>"; };
 		EFB106A5C43EFF789598DB07 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		FACB80EE4AFAD35045286323 /* DictationController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationController.swift; sourceTree = "<group>"; };
+		0A449C6F4E2EA2A8AE6524F3 /* PipetModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CodexVoice/PipetModel.swift"; sourceTree = SOURCE_ROOT; };
+		D615B09DD18BFCCE31C60763 /* PipetPreferencesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CodexVoice/PipetPreferencesView.swift"; sourceTree = SOURCE_ROOT; };
+		AA618BAAC22A3A257A668462 /* PipetSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CodexVoice/PipetSetupView.swift"; sourceTree = SOURCE_ROOT; };
+		586991A63FA5C98A48814F16 /* PipetTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CodexVoice/PipetTheme.swift"; sourceTree = SOURCE_ROOT; };
+		A1927FD80381775CCF1212B3 /* PipetLogo.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "assets/PipetLogo.png"; sourceTree = SOURCE_ROOT; };
+		7B8C9C10E0D4A27C7C2E5A5D /* Pipet.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = "assets/Pipet.icns"; sourceTree = SOURCE_ROOT; };
+		543E3AFC6BE37C56D366F049 /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = "LICENSE"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -70,6 +84,13 @@
 			children = (
 				0F2FF4EC4271CB152CB588AA /* CodexVoice */,
 				C678D6B82894FD869C2DC71D /* Products */,
+				0A449C6F4E2EA2A8AE6524F3 /* PipetModel.swift */,
+				D615B09DD18BFCCE31C60763 /* PipetPreferencesView.swift */,
+				AA618BAAC22A3A257A668462 /* PipetSetupView.swift */,
+				586991A63FA5C98A48814F16 /* PipetTheme.swift */,
+				A1927FD80381775CCF1212B3 /* PipetLogo.png */,
+				7B8C9C10E0D4A27C7C2E5A5D /* Pipet.icns */,
+				543E3AFC6BE37C56D366F049 /* LICENSE */,
 			);
 			sourceTree = "<group>";
 		};
@@ -89,6 +110,7 @@
 			buildConfigurationList = 64DA6A4FF86C477C48A7A22A /* Build configuration list for PBXNativeTarget "CodexVoice" */;
 			buildPhases = (
 				B250C7B97DA9F0A3748E051A /* Sources */,
+				AA0000000000000000000001 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -154,10 +176,27 @@
 				487A67A8B739C460E74ED6A5 /* SettingsView.swift in Sources */,
 				5FCAC315043F8805A629D0F9 /* StatusItemController.swift in Sources */,
 				C80EE48CC64C3AD2B4EA91F5 /* TextInsertionService.swift in Sources */,
+				84B79504FAFF57F17B29EB64 /* PipetModel.swift in Sources */,
+				0A5599A1A90BAC6BC4E5DFD6 /* PipetPreferencesView.swift in Sources */,
+				FE53CD53E5F639ACEAEC03D9 /* PipetSetupView.swift in Sources */,
+				6BBF088D2938F39B38643A9D /* PipetTheme.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXResourcesBuildPhase section */
+        AA0000000000000000000001 /* Resources */ = {
+            isa = PBXResourcesBuildPhase;
+            buildActionMask = 2147483647;
+            files = (
+				7A9D8242E522F8B9B6BB1494 /* PipetLogo.png in Resources */,
+				EC6D2D62B2B0452CB90DE566 /* Pipet.icns in Resources */,
+				F2E65DBEE3F4F759D6DD32C5 /* LICENSE in Resources */,
+            );
+            runOnlyForDeploymentPostprocessing = 0;
+        };
+/* End PBXResourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
 		217D548DF5F43C6F2EF7CDDF /* Debug */ = {
@@ -167,7 +206,8 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEVELOPMENT_TEAM = "";
-				ENABLE_HARDENED_RUNTIME = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				CODE_SIGN_ENTITLEMENTS = CodexVoice/Pipet.entitlements;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = CodexVoice/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -175,8 +215,8 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				PRODUCT_BUNDLE_IDENTIFIER = dev.codexvoice.app;
-				PRODUCT_NAME = CodexVoice;
+				PRODUCT_BUNDLE_IDENTIFIER = au.vietbrosinaus.pipet;
+				PRODUCT_NAME = Pipet;
 				SDKROOT = macosx;
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_VERSION = 6.0;
@@ -190,7 +230,8 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEVELOPMENT_TEAM = "";
-				ENABLE_HARDENED_RUNTIME = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				CODE_SIGN_ENTITLEMENTS = CodexVoice/Pipet.entitlements;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = CodexVoice/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -198,8 +239,8 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				PRODUCT_BUNDLE_IDENTIFIER = dev.codexvoice.app;
-				PRODUCT_NAME = CodexVoice;
+				PRODUCT_BUNDLE_IDENTIFIER = au.vietbrosinaus.pipet;
+				PRODUCT_NAME = Pipet;
 				SDKROOT = macosx;
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_VERSION = 6.0;

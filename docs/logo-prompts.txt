@@ -1,0 +1,16 @@
+Pipet logo generation
+Mode: built-in image_gen, transparent_background=true.
+Final asset: assets/PipetLogo.png. Converted into assets/Pipet.icns for macOS.
+
+Initial prompt:
+Use case: logo-brand. Asset type: production macOS app icon and logo for a voice-to-text app named Pipet by vietbrosinaus.
+Primary request: Create ONE polished square app icon, 1024x1024 composition. A friendly coral-orange speech-bubble mascot with a text insertion cursor detail, combining speaking and putting words into any app. Keep the mark bold and very simple, readable at 32 pixels.
+Style: warm playful illustrated identity, rounded soft shapes, warm cream paper, restrained soft shading, slightly tactile like a high quality sticker. Inspired by friendly travel and chat apps, not corporate AI branding. No robot, no literal microphone, no pipette equipment.
+Composition: centered large coral speech-bubble silhouette occupies roughly 65 percent of the tile. Two tiny dark warm-brown eyes and a gentle curved smile. Three small rounded cream sound bars toward the upper portion of the bubble; a short lower-right tail resolves into a simple dark teal I-beam text cursor. No extra objects, no sparkles.
+Backdrop: warm cream rounded-square macOS icon tile with generous corner radius, nearly fills canvas with 5 percent transparent outer padding, subtle warm shadow. Palette: cream #F6F2EA, coral #E88765, dark warm ink #3A3730, muted teal #4E97BD. Clean crisp edges, controlled color, premium macOS icon finish.
+Text: none. No letters, wordmark, caption, watermark, mockup, multiple options, border, screenshot or device. Transparent outside the rounded tile. Deliver only the icon.
+
+Refinement prompt:
+Refine the exact Pipet app icon. Preserve the coral smiling speech bubble, cream sound bars, teal I-beam, warm cream rounded-square tile and composition. Change only the outer tile boundary and transparent background: make all four rounded-square edges clean, smooth and symmetrical with a crisp antialiased alpha edge. Remove stray specks, ragged pixels, white flecks and grain outside the tile. No drop shadow extending outside the tile. Keep the internal gentle tactile shading. Deliver the isolated icon on true transparent background with clean empty margins, no text or new elements.
+
+2026-10-01 edit (built-in imagegen): Remove the entire teal letter I / cursor; reconstruct cream background and coral tail. Preserve smiling speech bubble, waveform bars and transparent exterior.

@@ -5,6 +5,7 @@ import Foundation
 final class DictationController {
     enum State {
         case idle
+        case starting
         case recording
         case transcribing
         case inserting
@@ -14,6 +15,8 @@ final class DictationController {
             switch self {
             case .idle:
                 return "Idle"
+            case .starting:
+                return "Starting microphone…"
             case .recording:
                 return "Listening…"
             case .transcribing:
@@ -38,6 +41,9 @@ final class DictationController {
     }
 
     var onStateChange: ((State) -> Void)?
+    private var hotkeyHeld = false
+    private var targetPID: pid_t?
+    private(set) var lastTranscript: String?
 
     init(
         permissionCoordinator: PermissionCoordinator,
@@ -53,7 +59,7 @@ final class DictationController {
 
     func handleHotkeyPressed() {
         switch state {
-        case .recording, .transcribing, .inserting:
+        case .starting, .recording, .transcribing, .inserting:
             DebugLogger.write("Hotkey press ignored because state=\(state.statusText)")
             return
         case .idle, .error:
@@ -61,12 +67,16 @@ final class DictationController {
         }
 
         DebugLogger.write("Hotkey pressed")
+        hotkeyHeld = true
+        targetPID = NSWorkspace.shared.frontmostApplication?.processIdentifier
+        state = .starting
         Task { @MainActor in
             await beginDictation()
         }
     }
 
     func handleHotkeyReleased() {
+        hotkeyHeld = false
         guard case .recording = state else {
             DebugLogger.write("Hotkey release ignored because state=\(state.statusText)")
             return
@@ -80,9 +90,21 @@ final class DictationController {
 
     private func beginDictation() async {
         do {
+            guard case .trusted = permissionCoordinator.accessibilityStatus(promptIfNeeded: false) else {
+                state = .error("Open Pipet and enable text insertion to get started.")
+                return
+            }
             try await audioCaptureService.start()
+            guard hotkeyHeld else {
+                audioCaptureService.cancel()
+                state = .idle
+                return
+            }
             state = .recording
         } catch {
+            if case AudioCaptureError.authorizationDenied = error {
+                permissionCoordinator.openMicrophoneSettings()
+            }
             DebugLogger.write("Begin dictation failed: \(error.localizedDescription)")
             state = .error(error.localizedDescription)
         }
@@ -116,6 +138,11 @@ final class DictationController {
             return
         }
 
+        lastTranscript = transcript
+        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == targetPID else {
+            state = .error("App changed. Use Copy Last Transcript in the Pipet menu.")
+            return
+        }
         state = .inserting
         switch permissionCoordinator.accessibilityStatus(promptIfNeeded: true) {
         case .trusted:
@@ -124,7 +151,7 @@ final class DictationController {
             if inserted {
                 state = .idle
             } else {
-                state = .error("Insert failed")
+                state = .error("Use Copy Last Transcript in the Pipet menu")
             }
         case .needsPrompt:
             permissionCoordinator.openAccessibilitySettings()

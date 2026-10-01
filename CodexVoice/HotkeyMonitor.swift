@@ -1,4 +1,5 @@
 import Carbon
+import AppKit
 import Foundation
 
 @MainActor
@@ -66,7 +67,7 @@ final class HotkeyMonitor {
             return noErr
         }
 
-        InstallEventHandler(
+        let handlerStatus = InstallEventHandler(
             GetApplicationEventTarget(),
             handler,
             eventTypes.count,
@@ -75,7 +76,7 @@ final class HotkeyMonitor {
             &eventHandlerRef
         )
 
-        RegisterEventHotKey(
+        let hotkeyStatus = RegisterEventHotKey(
             UInt32(kVK_ANSI_M),
             UInt32(controlKey),
             hotKeyID,
@@ -84,6 +85,13 @@ final class HotkeyMonitor {
             &hotKeyRef
         )
 
+        guard handlerStatus == noErr, hotkeyStatus == noErr else {
+            let alert = NSAlert()
+            alert.messageText = "Control-M could not be registered"
+            alert.informativeText = "Another app may already use this shortcut. Quit that app and reopen Pipet."
+            alert.runModal()
+            return
+        }
         isStarted = true
         DebugLogger.write("Hotkey monitor started")
     }

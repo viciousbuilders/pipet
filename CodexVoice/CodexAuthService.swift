@@ -32,7 +32,7 @@ actor CodexAuthService {
         let tokens: Tokens
     }
 
-    private let authFileURL = URL(fileURLWithPath: NSString(string: "~/.codex/auth.json").expandingTildeInPath)
+    private let authFileURL = URL(fileURLWithPath: ProcessInfo.processInfo.environment["CODEX_HOME"] ?? NSString(string: "~/.codex").expandingTildeInPath).appendingPathComponent("auth.json")
 
     func currentCredentials() throws -> CodexCredentials {
         try readCredentials()
@@ -63,76 +63,75 @@ actor CodexAuthService {
 
     private func refreshAuthState() async throws {
         let codexBinaryURL = try resolveCodexBinaryURL()
-
-        guard FileManager.default.isExecutableFile(atPath: codexBinaryURL.path) else {
-            throw CodexAuthError.refreshFailed("Codex CLI was not found at \(codexBinaryURL.path).")
-        }
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("codex-voice-auth-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let outputURL = directory.appendingPathComponent("stdout")
+        let errorURL = directory.appendingPathComponent("stderr")
+        FileManager.default.createFile(atPath: outputURL.path, contents: nil, attributes: [.posixPermissions: 0o600])
+        FileManager.default.createFile(atPath: errorURL.path, contents: nil, attributes: [.posixPermissions: 0o600])
+        let output = try FileHandle(forWritingTo: outputURL)
+        let errors = try FileHandle(forWritingTo: errorURL)
+        defer { try? output.close(); try? errors.close() }
 
         let process = Process()
-        let inputPipe = Pipe()
-        let outputPipe = Pipe()
-        let errorPipe = Pipe()
-
+        let input = Pipe()
         process.executableURL = codexBinaryURL
         process.arguments = ["app-server", "--listen", "stdio://"]
-        process.standardInput = inputPipe
-        process.standardOutput = outputPipe
-        process.standardError = errorPipe
-
+        process.standardInput = input
+        process.standardOutput = output
+        process.standardError = errors
         try process.run()
-
-        let messages: [[String: Any]] = [
-            [
-                "id": 1,
-                "method": "initialize",
-                "params": [
-                    "clientInfo": [
-                        "name": "codex-voice",
-                        "version": "0.1.0",
-                    ],
-                    "capabilities": [
-                        "experimentalApi": true,
-                        "optOutNotificationMethods": [],
-                    ],
-                ],
-            ],
-            [
-                "id": 2,
-                "method": "account/read",
-                "params": [
-                    "refreshToken": true,
-                ],
-            ],
-        ]
-
-        for message in messages {
-            let data = try JSONSerialization.data(withJSONObject: message)
-            inputPipe.fileHandleForWriting.write(data)
-            inputPipe.fileHandleForWriting.write(Data([0x0A]))
+        defer {
+            try? input.fileHandleForWriting.close()
+            if process.isRunning { process.terminate() }
         }
 
-        try inputPipe.fileHandleForWriting.close()
-
-        let stdoutData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-        let stderrData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-        process.waitUntilExit()
-
-        guard process.terminationStatus == 0 else {
-            let message = String(data: stderrData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
-            throw CodexAuthError.refreshFailed(message?.isEmpty == false ? message! : "The Codex app-server exited with status \(process.terminationStatus).")
+        func send(_ message: [String: Any]) throws {
+            var data = try JSONSerialization.data(withJSONObject: message)
+            data.append(0x0A)
+            try input.fileHandleForWriting.write(contentsOf: data)
         }
 
-        let output = String(decoding: stdoutData, as: UTF8.self)
-        let lines = output.split(whereSeparator: \.isNewline)
-        guard lines.contains(where: { $0.contains("\"id\":2") && $0.contains("\"result\"") }) else {
-            throw CodexAuthError.refreshFailed("Codex did not confirm the auth refresh request.")
+        // Keep stdin open, and finish initialization before asking for a refresh.
+        // Closing stdin early lets current CLI versions exit before replying.
+        try send([
+            "id": 1, "method": "initialize",
+            "params": ["clientInfo": ["name": "codex-voice", "version": "0.2.0"]],
+        ])
+        try await waitForResponse(id: 1, at: outputURL, process: process)
+        try send(["method": "initialized"])
+        try send(["id": 2, "method": "account/read", "params": ["refreshToken": true]])
+        try await waitForResponse(id: 2, at: outputURL, process: process)
+    }
+
+    private func waitForResponse(id: Int, at url: URL, process: Process) async throws {
+        let deadline = ContinuousClock.now.advanced(by: .seconds(20))
+        while ContinuousClock.now < deadline {
+            let data = try Data(contentsOf: url)
+            for line in String(decoding: data, as: UTF8.self).split(whereSeparator: \.isNewline) {
+                guard let object = try? JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any],
+                      (object["id"] as? Int) == id else { continue }
+                guard object["result"] != nil, object["error"] == nil else {
+                    throw CodexAuthError.refreshFailed("Codex rejected the authentication request. Open Codex and sign in again.")
+                }
+                return
+            }
+            guard process.isRunning else {
+                throw CodexAuthError.refreshFailed("Codex exited before confirming authentication.")
+            }
+            try await Task.sleep(for: .milliseconds(50))
         }
+        throw CodexAuthError.refreshFailed("Codex did not respond within 20 seconds. Open Codex and sign in again.")
     }
 
     private func resolveCodexBinaryURL() throws -> URL {
         let candidatePaths = [
             ProcessInfo.processInfo.environment["CODEX_CLI_PATH"],
             codexBinaryPathFromPATH(),
+            NSString(string: "~/.local/bin/codex").expandingTildeInPath,
+            "/opt/homebrew/bin/codex",
+            "/usr/local/bin/codex",
             "/Applications/Codex.app/Contents/Resources/codex",
         ].compactMap { $0 }
 

@@ -11,16 +11,21 @@ targets:
     deploymentTarget: "14.0"
     sources:
       - path: CodexVoice
+      - path: assets/PipetLogo.png
+        buildPhase: resources
+      - path: assets/Pipet.icns
+        buildPhase: resources
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: dev.codexvoice.app
-        PRODUCT_NAME: CodexVoice
+        PRODUCT_BUNDLE_IDENTIFIER: au.vietbrosinaus.pipet
+        PRODUCT_NAME: Pipet
         SWIFT_VERSION: "6.0"
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: CodexVoice/Info.plist
+        CODE_SIGN_ENTITLEMENTS: CodexVoice/Pipet.entitlements
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: ""
-        ENABLE_HARDENED_RUNTIME: NO
+        ENABLE_HARDENED_RUNTIME: YES
         MACOSX_DEPLOYMENT_TARGET: "14.0"
         SUPPORTS_MACCATALYST: NO
         ASSETCATALOG_COMPILER_APPICON_NAME: ""

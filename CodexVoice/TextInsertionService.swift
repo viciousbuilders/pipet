@@ -16,9 +16,7 @@ final class TextInsertionService {
 
         if shouldPreferPasteboard(for: frontmostBundleID) {
             DebugLogger.write("Preferring pasteboard insert for app: \(frontmostBundleID)")
-            if await insertViaPasteboard(text) {
-                return true
-            }
+            return await insertViaPasteboard(text)
         }
 
         if insertViaAccessibility(text, frontmostBundleID: frontmostBundleID) {
@@ -162,20 +160,25 @@ final class TextInsertionService {
 
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
+        let transcriptChangeCount = pasteboard.changeCount
 
         await waitForHotkeyModifiersToRelease()
         try? await Task.sleep(for: .milliseconds(100))
 
-        NSApp.deactivate()
-        targetApplication?.activate(options: [.activateIgnoringOtherApps])
-        try? await Task.sleep(for: .milliseconds(120))
+        guard pasteboard.changeCount == transcriptChangeCount else { return false }
+        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == targetApplication?.processIdentifier else {
+            if pasteboard.changeCount == transcriptChangeCount { restorePasteboard(previousItems) }
+            return false
+        }
 
-        let didPaste = pasteWithAppleScript() || pasteWithCGEvents()
+        let didPaste = pasteWithCGEvents()
         DebugLogger.write("Paste fallback result: \(didPaste)")
 
         Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(220))
-            restorePasteboard(previousItems)
+            try? await Task.sleep(for: .seconds(1))
+            if pasteboard.changeCount == transcriptChangeCount {
+                restorePasteboard(previousItems)
+            }
         }
 
         return didPaste
@@ -192,27 +195,6 @@ final class TextInsertionService {
 
             try? await Task.sleep(for: .milliseconds(25))
         }
-    }
-
-    private func pasteWithAppleScript() -> Bool {
-        let source = """
-        tell application id "com.apple.systemevents"
-            keystroke "v" using command down
-        end tell
-        """
-
-        guard let script = NSAppleScript(source: source) else {
-            return false
-        }
-
-        var error: NSDictionary?
-        script.executeAndReturnError(&error)
-        if let error {
-            DebugLogger.write("AppleScript paste failed: \(error)")
-        } else {
-            DebugLogger.write("AppleScript paste succeeded")
-        }
-        return error == nil
     }
 
     private func pasteWithCGEvents() -> Bool {
@@ -237,19 +219,16 @@ final class TextInsertionService {
     }
 
     private func restorePasteboard(_ items: [[NSPasteboard.PasteboardType: Data]]?) {
-        guard let items else {
-            return
-        }
-
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
 
-        for item in items {
+        let restoredItems = (items ?? []).map { item in
             let pasteboardItem = NSPasteboardItem()
             for (type, data) in item {
                 pasteboardItem.setData(data, forType: type)
             }
-            pasteboard.writeObjects([pasteboardItem])
+            return pasteboardItem
         }
+        pasteboard.writeObjects(restoredItems)
     }
 }
