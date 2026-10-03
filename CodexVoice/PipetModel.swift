@@ -3,6 +3,7 @@ import AVFoundation
 import ApplicationServices
 import ServiceManagement
 import SwiftUI
+import UniformTypeIdentifiers
 
 @MainActor
 final class PipetModel: ObservableObject {
@@ -17,6 +18,7 @@ final class PipetModel: ObservableObject {
     @Published var loginEnabled = false
     @Published var settingsError: String?
     @Published var restarting = false
+    @Published var insertionOverrides = InsertionPreferences().overrides
     private let permissions = PermissionCoordinator()
     private let auth = CodexAuthService()
 
@@ -86,6 +88,27 @@ final class PipetModel: ObservableObject {
             settingsError = SMAppService.mainApp.status == .requiresApproval ? "Allow Pipet in System Settings → General → Login Items." : nil
         } catch { settingsError = error.localizedDescription }
         refreshPermissions()
+    }
+
+    func setInsertionMethod(_ method: InsertionMethod?, for bundleID: String) {
+        InsertionPreferences().set(method, for: bundleID)
+        insertionOverrides = InsertionPreferences().overrides
+    }
+
+    func addInsertionApp() {
+        let panel = NSOpenPanel()
+        panel.title = "Choose an app for an insertion override"
+        panel.allowedContentTypes = [.applicationBundle]
+        panel.directoryURL = URL(fileURLWithPath: "/Applications")
+        panel.allowsMultipleSelection = false
+        guard panel.runModal() == .OK, let url = panel.url,
+              let bundleID = Bundle(url: url)?.bundleIdentifier else { return }
+        setInsertionMethod(.paste, for: bundleID)
+    }
+
+    func insertionAppName(for bundleID: String) -> String {
+        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) else { return bundleID }
+        return FileManager.default.displayName(atPath: url.path)
     }
 
     func copyTranscript() {

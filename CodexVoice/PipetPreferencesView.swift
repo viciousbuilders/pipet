@@ -12,6 +12,26 @@ struct PipetPreferencesView: View {
                     Text("Pipet lives in your menu bar. Hold Control-M in any editable text field to dictate.")
                         .foregroundStyle(PipetTheme.secondary)
                 }
+                Section("Text insertion") {
+                    Text("Paste is the default for every app, including web editors. If an app blocks paste, add it below and choose Direct insertion.")
+                        .foregroundStyle(PipetTheme.secondary)
+                    ForEach(model.insertionOverrides.keys.sorted(), id: \.self) { bundleID in
+                        HStack {
+                            Picker(model.insertionAppName(for: bundleID), selection: Binding(
+                                get: { InsertionMethod(rawValue: model.insertionOverrides[bundleID] ?? "") ?? .paste },
+                                set: { model.setInsertionMethod($0, for: bundleID) }
+                            )) {
+                                Text("Paste").tag(InsertionMethod.paste)
+                                Text("Direct insertion").tag(InsertionMethod.accessibility)
+                            }
+                            Button("Remove") { model.setInsertionMethod(nil, for: bundleID) }
+                                .accessibilityLabel("Remove override for \(model.insertionAppName(for: bundleID))")
+                        }
+                    }
+                    Button("Add app…") { model.addInsertionApp() }
+                    Text("If the destination changes, Pipet stops. If insertion cannot be verified, check the field before copying your last transcript.")
+                        .foregroundStyle(PipetTheme.secondary)
+                }
                 Section("Permissions") {
                     HStack {
                         Label("Microphone", systemImage: "mic")
@@ -36,7 +56,7 @@ struct PipetPreferencesView: View {
                     Link("Original project and MIT license", destination: URL(string: "https://github.com/anthnykr/codex-voice")!)
                 }
             }
-            .formStyle(.grouped).scrollContentBackground(.hidden).scrollDisabled(true).frame(height: 760)
+            .formStyle(.grouped).scrollContentBackground(.hidden).scrollDisabled(true).frame(height: 960 + CGFloat(model.insertionOverrides.count) * 44)
             if let error = model.settingsError {
                 Label(error, systemImage: "exclamationmark.circle").foregroundStyle(PipetTheme.accent)
                     .fixedSize(horizontal: false, vertical: true)

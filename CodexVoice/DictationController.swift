@@ -43,6 +43,7 @@ final class DictationController {
     var onStateChange: ((State) -> Void)?
     private var hotkeyHeld = false
     private var targetPID: pid_t?
+    private var insertionTarget: TextInsertionService.Target?
     private(set) var lastTranscript: String?
 
     init(
@@ -69,6 +70,7 @@ final class DictationController {
         DebugLogger.write("Hotkey pressed")
         hotkeyHeld = true
         targetPID = NSWorkspace.shared.frontmostApplication?.processIdentifier
+        insertionTarget = nil
         state = .starting
         Task { @MainActor in
             await beginDictation()
@@ -94,6 +96,12 @@ final class DictationController {
                 state = .error("Open Pipet and enable text insertion to get started.")
                 return
             }
+            guard let targetPID, let target = await textInsertionService.captureTarget(expectedPID: targetPID) else {
+                state = .error("Click an editable field before holding Control-M. Secure fields are not supported.")
+                return
+            }
+            guard hotkeyHeld else { state = .idle; return }
+            insertionTarget = target
             try await audioCaptureService.start()
             guard hotkeyHeld else {
                 audioCaptureService.cancel()
@@ -139,19 +147,20 @@ final class DictationController {
         }
 
         lastTranscript = transcript
-        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == targetPID else {
-            state = .error("App changed. Use Copy Last Transcript in the Pipet menu.")
+        guard let insertionTarget else {
+            state = .error("Use Copy Last Transcript in the Pipet menu.")
             return
         }
         state = .inserting
         switch permissionCoordinator.accessibilityStatus(promptIfNeeded: true) {
         case .trusted:
-            let inserted = await textInsertionService.insert(transcript)
-            DebugLogger.write("Insert result: \(inserted)")
-            if inserted {
+            switch await textInsertionService.insert(transcript, into: insertionTarget) {
+            case .confirmed:
                 state = .idle
-            } else {
-                state = .error("Use Copy Last Transcript in the Pipet menu")
+            case .unverified:
+                state = .error("Insertion could not be verified. Check the field before using Copy Last Transcript.")
+            case .failed(let message):
+                state = .error(message)
             }
         case .needsPrompt:
             permissionCoordinator.openAccessibilitySettings()

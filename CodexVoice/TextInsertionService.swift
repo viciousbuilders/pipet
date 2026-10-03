@@ -3,232 +3,232 @@ import ApplicationServices
 import Carbon.HIToolbox
 import Foundation
 
+enum InsertionMethod: String, CaseIterable {
+    case paste
+    case accessibility
+}
+
+@MainActor
+struct InsertionPreferences {
+    static let overridesKey = "insertionMethodOverrides"
+    let defaults: UserDefaults
+
+    init(defaults: UserDefaults = .standard) { self.defaults = defaults }
+
+    var overrides: [String: String] { defaults.dictionary(forKey: Self.overridesKey) as? [String: String] ?? [:] }
+
+    func method(for bundleID: String) -> InsertionMethod {
+        InsertionMethod(rawValue: overrides[bundleID] ?? "") ?? .paste
+    }
+
+    func set(_ method: InsertionMethod?, for bundleID: String) {
+        var values = overrides
+        values[bundleID] = method?.rawValue
+        defaults.set(values, forKey: Self.overridesKey)
+    }
+}
+
+struct InsertionSnapshot: Equatable, Sendable {
+    let value: String?
+    let selection: NSRange?
+
+    func expectedValue(inserting text: String) -> String? {
+        guard let value, let selection else { return nil }
+        let current = value as NSString
+        // Accessibility ranges use UTF-16, not Swift character counts.
+        guard selection.location >= 0, selection.length >= 0,
+              selection.location <= current.length,
+              selection.length <= current.length - selection.location else { return nil }
+        return current.replacingCharacters(in: selection, with: text)
+    }
+}
+
 @MainActor
 final class TextInsertionService {
-    func insert(_ text: String) async -> Bool {
-        guard !text.isEmpty else {
-            DebugLogger.write("Insert aborted: empty text")
-            return false
-        }
-
-        let frontmostBundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "unknown"
-        DebugLogger.write("Insert starting for frontmost app: \(frontmostBundleID)")
-
-        if shouldPreferPasteboard(for: frontmostBundleID) {
-            DebugLogger.write("Preferring pasteboard insert for app: \(frontmostBundleID)")
-            return await insertViaPasteboard(text)
-        }
-
-        if insertViaAccessibility(text, frontmostBundleID: frontmostBundleID) {
-            DebugLogger.write("Insert succeeded via Accessibility")
-            return true
-        }
-
-        DebugLogger.write("Accessibility insert failed, falling back to pasteboard")
-        return await insertViaPasteboard(text)
+    // AX references are immutable IPC handles. The dedicated actor owns all reads
+    // and writes; sending a retained handle across executors does not access AppKit.
+    struct Target: @unchecked Sendable {
+        let pid: pid_t
+        let bundleID: String
+        let element: AXUIElement
+        let snapshot: InsertionSnapshot
     }
 
-    private func insertViaAccessibility(_ text: String, frontmostBundleID: String) -> Bool {
-        let systemWideElement = AXUIElementCreateSystemWide()
-        var focusedObject: CFTypeRef?
-        let focusedResult = AXUIElementCopyAttributeValue(
-            systemWideElement,
-            kAXFocusedUIElementAttribute as CFString,
-            &focusedObject
-        )
+    enum Result {
+        case confirmed
+        case unverified
+        case failed(String)
+    }
 
-        guard focusedResult == .success, let focusedObject else {
-            DebugLogger.write("AX focused element lookup failed: \(focusedResult.rawValue)")
-            return false
+    private let accessibility = AccessibilityClient()
+
+    func captureTarget(expectedPID: pid_t? = nil) async -> Target? {
+        guard let app = NSWorkspace.shared.frontmostApplication,
+              expectedPID == nil || app.processIdentifier == expectedPID else { return nil }
+        let target = await accessibility.capture(pid: app.processIdentifier, bundleID: app.bundleIdentifier ?? "unknown")
+        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier else { return nil }
+        return target
+    }
+
+    func insert(_ text: String, into target: Target) async -> Result {
+        guard !text.isEmpty else { return .failed("No words to insert.") }
+        guard await waitForModifiersToRelease() else {
+            return .failed("Release the shortcut keys, then use Copy Last Transcript.")
+        }
+        // Give the application time to process the shortcut's key-up events.
+        try? await Task.sleep(for: .milliseconds(100))
+        guard await targetIsCurrent(target) else {
+            return .failed("The app, field, or selection changed. Use Copy Last Transcript.")
         }
 
-        let element = unsafeDowncast(focusedObject, to: AXUIElement.self)
-        let role = stringValue(for: kAXRoleAttribute as CFString, element: element) ?? "unknown"
-        let subrole = stringValue(for: kAXSubroleAttribute as CFString, element: element) ?? "none"
-        DebugLogger.write("AX focused role=\(role) subrole=\(subrole) app=\(frontmostBundleID)")
-
-        let selectedTextSetResult = AXUIElementSetAttributeValue(
-            element,
-            kAXSelectedTextAttribute as CFString,
-            text as CFTypeRef
-        )
-
-        if selectedTextSetResult == .success {
-            DebugLogger.write("AX selected text replacement succeeded")
-            return true
-        } else {
-            DebugLogger.write("AX selected text replacement failed: \(selectedTextSetResult.rawValue)")
-        }
-
-        var selectedRangeObject: CFTypeRef?
-        let selectedRangeResult = AXUIElementCopyAttributeValue(
-            element,
-            kAXSelectedTextRangeAttribute as CFString,
-            &selectedRangeObject
-        )
-
-        if selectedRangeResult == .success,
-           let selectedRangeObject,
-           CFGetTypeID(selectedRangeObject) == AXValueGetTypeID() {
-            let selectedRangeValue = unsafeDowncast(selectedRangeObject, to: AXValue.self)
-            var selectedRange = CFRange()
-            if AXValueGetValue(selectedRangeValue, .cfRange, &selectedRange) {
-                var valueObject: CFTypeRef?
-                let valueResult = AXUIElementCopyAttributeValue(
-                    element,
-                    kAXValueAttribute as CFString,
-                    &valueObject
-                )
-
-                if valueResult == .success, let currentValue = valueObject as? String {
-                    let nsValue = currentValue as NSString
-                    let replacementRange = NSRange(location: selectedRange.location, length: selectedRange.length)
-                    guard replacementRange.location != NSNotFound,
-                          replacementRange.upperBound <= nsValue.length else {
-                        return false
-                    }
-
-                    let updatedValue = nsValue.replacingCharacters(in: replacementRange, with: text)
-                    var updatedSelection = CFRange(location: selectedRange.location + (text as NSString).length, length: 0)
-
-                    let valueSetResult = AXUIElementSetAttributeValue(
-                        element,
-                        kAXValueAttribute as CFString,
-                        updatedValue as CFTypeRef
-                    )
-
-                    guard valueSetResult == .success else {
-                        DebugLogger.write("AX value set failed: \(valueSetResult.rawValue)")
-                        return false
-                    }
-
-                    if let updatedSelectionValue = AXValueCreate(.cfRange, &updatedSelection) {
-                        _ = AXUIElementSetAttributeValue(
-                            element,
-                            kAXSelectedTextRangeAttribute as CFString,
-                            updatedSelectionValue
-                        )
-                    }
-
-                    return true
-                }
+        let expected = target.snapshot.expectedValue(inserting: text)
+        if InsertionPreferences().method(for: target.bundleID) == .accessibility {
+            // This explicit override never retries with paste: a partially applied AX
+            // edit must not be inserted twice.
+            guard await accessibility.insert(text, into: target, expectedValue: expected) else {
+                return .failed("Direct insertion could not be confirmed. Check the field before using Copy Last Transcript.")
             }
+            return await verify(expectedValue: expected, target: target)
         }
-
-        DebugLogger.write("AX insert path unavailable")
-        return false
+        return await insertViaPasteboard(text, into: target, expectedValue: expected)
     }
 
-    private func shouldPreferPasteboard(for bundleIdentifier: String) -> Bool {
-        let pasteFirstApps = [
-            "com.google.Chrome",
-            "com.google.Chrome.canary",
-            "com.microsoft.edgemac",
-            "com.brave.Browser",
-            "company.thebrowser.Browser",
-            "org.mozilla.firefox",
-            "com.electron.",
-            "com.todesktop.",
-            "com.tinyspeck.slackmacgap",
-            "com.apple.Safari",
-        ]
-
-        return pasteFirstApps.contains(where: { bundleIdentifier == $0 || bundleIdentifier.hasPrefix($0) })
+    private func targetIsCurrent(_ target: Target) async -> Bool {
+        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == target.pid else { return false }
+        let matches = await accessibility.matches(target)
+        return matches && NSWorkspace.shared.frontmostApplication?.processIdentifier == target.pid
     }
 
-    private func stringValue(for attribute: CFString, element: AXUIElement) -> String? {
-        var value: CFTypeRef?
-        let result = AXUIElementCopyAttributeValue(element, attribute, &value)
-        guard result == .success else {
-            return nil
+    private func insertViaPasteboard(_ text: String, into target: Target, expectedValue: String?) async -> Result {
+        guard await targetIsCurrent(target), modifiersReleased() else {
+            return .failed("The destination or shortcut keys changed. Use Copy Last Transcript.")
         }
-
-        return value as? String
-    }
-
-    private func insertViaPasteboard(_ text: String) async -> Bool {
-        let targetApplication = NSWorkspace.shared.frontmostApplication
-        DebugLogger.write("Paste fallback targeting app: \(targetApplication?.bundleIdentifier ?? "unknown")")
         let pasteboard = NSPasteboard.general
         let previousItems = pasteboard.pasteboardItems?.map { item in
             item.types.reduce(into: [NSPasteboard.PasteboardType: Data]()) { result, type in
-                if let data = item.data(forType: type) {
-                    result[type] = data
-                }
+                if let data = item.data(forType: type) { result[type] = data }
             }
         }
-
         pasteboard.clearContents()
-        pasteboard.setString(text, forType: .string)
+        let written = pasteboard.setString(text, forType: .string)
         let transcriptChangeCount = pasteboard.changeCount
-
-        await waitForHotkeyModifiersToRelease()
-        try? await Task.sleep(for: .milliseconds(100))
-
-        guard pasteboard.changeCount == transcriptChangeCount else { return false }
-        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == targetApplication?.processIdentifier else {
+        defer {
             if pasteboard.changeCount == transcriptChangeCount { restorePasteboard(previousItems) }
-            return false
         }
-
-        let didPaste = pasteWithCGEvents()
-        DebugLogger.write("Paste fallback result: \(didPaste)")
-
-        Task { @MainActor in
-            try? await Task.sleep(for: .seconds(1))
-            if pasteboard.changeCount == transcriptChangeCount {
-                restorePasteboard(previousItems)
-            }
-        }
-
-        return didPaste
+        guard written else { return .failed("Could not prepare the clipboard. Use Copy Last Transcript.") }
+        guard pasteWithCGEvents() else { return .failed("Could not send paste. Use Copy Last Transcript.") }
+        // Keep the temporary clipboard available for at least a second, even if AX
+        // confirms early. Editors may read it asynchronously. Never overwrite a copy
+        // the user makes in the meantime.
+        let result = await verify(expectedValue: expectedValue, target: target)
+        return result
     }
 
-    private func waitForHotkeyModifiersToRelease() async {
-        for _ in 0 ..< 12 {
-            let leftControlDown = CGEventSource.keyState(.combinedSessionState, key: CGKeyCode(kVK_Control))
-            let rightControlDown = CGEventSource.keyState(.combinedSessionState, key: CGKeyCode(kVK_RightControl))
-
-            guard leftControlDown || rightControlDown else {
-                return
+    private func verify(expectedValue: String?, target: Target) async -> Result {
+        var confirmed = false
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: .seconds(1))
+        repeat {
+            try? await Task.sleep(for: .milliseconds(50))
+            if let expectedValue, !confirmed {
+                confirmed = await accessibility.value(of: target) == expectedValue
             }
+        } while clock.now < deadline
+        DebugLogger.write("Insertion verification: \(confirmed ? "confirmed" : "unverified")")
+        return confirmed ? .confirmed : .unverified
+    }
 
+    private func waitForModifiersToRelease() async -> Bool {
+        for _ in 0 ..< 80 {
+            if modifiersReleased() { return true }
             try? await Task.sleep(for: .milliseconds(25))
         }
+        return false
+    }
+
+    private func modifiersReleased() -> Bool {
+        let keys = [kVK_Control, kVK_RightControl, kVK_Command, kVK_RightCommand, kVK_Shift, kVK_RightShift, kVK_Option, kVK_RightOption]
+        return !keys.contains(where: { CGEventSource.keyState(.combinedSessionState, key: CGKeyCode($0)) })
     }
 
     private func pasteWithCGEvents() -> Bool {
-        let commandDown = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(kVK_Command), keyDown: true)
-        commandDown?.flags = .maskCommand
-        let vDown = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(kVK_ANSI_V), keyDown: true)
-        vDown?.flags = .maskCommand
-        let vUp = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(kVK_ANSI_V), keyDown: false)
-        vUp?.flags = .maskCommand
-        let commandUp = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(kVK_Command), keyDown: false)
-
-        guard let commandDown, let vDown, let vUp, let commandUp else {
-            return false
-        }
-
-        commandDown.post(tap: .cghidEventTap)
-        vDown.post(tap: .cghidEventTap)
-        vUp.post(tap: .cghidEventTap)
-        commandUp.post(tap: .cghidEventTap)
-        DebugLogger.write("CGEvent paste posted")
+        let source = CGEventSource(stateID: .privateState)
+        guard let down = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(kVK_ANSI_V), keyDown: true),
+              let up = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(kVK_ANSI_V), keyDown: false) else { return false }
+        down.flags = .maskCommand
+        up.flags = .maskCommand
+        down.post(tap: .cghidEventTap)
+        up.post(tap: .cghidEventTap)
         return true
     }
 
     private func restorePasteboard(_ items: [[NSPasteboard.PasteboardType: Data]]?) {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
-
-        let restoredItems = (items ?? []).map { item in
-            let pasteboardItem = NSPasteboardItem()
-            for (type, data) in item {
-                pasteboardItem.setData(data, forType: type)
-            }
-            return pasteboardItem
+        let restored = (items ?? []).map { values in
+            let item = NSPasteboardItem()
+            for (type, data) in values { item.setData(data, forType: type) }
+            return item
         }
-        pasteboard.writeObjects(restoredItems)
+        if !restored.isEmpty { pasteboard.writeObjects(restored) }
     }
+}
+
+
+private actor AccessibilityClient {
+    func capture(pid: pid_t, bundleID: String) -> TextInsertionService.Target? {
+        guard let element = focusedElement(in: pid),
+              attribute(kAXSubroleAttribute, of: element) as? String != kAXSecureTextFieldSubrole as String else { return nil }
+        return TextInsertionService.Target(pid: pid, bundleID: bundleID, element: element, snapshot: snapshot(of: element))
+    }
+
+    func matches(_ target: TextInsertionService.Target) -> Bool {
+        guard let focused = focusedElement(in: target.pid), CFEqual(focused, target.element) else { return false }
+        return snapshot(of: focused) == target.snapshot
+    }
+
+    func value(of target: TextInsertionService.Target) -> String? { attribute(kAXValueAttribute, of: target.element) as? String }
+
+    private func focusedElement(in pid: pid_t) -> AXUIElement? {
+        let application = AXUIElementCreateApplication(pid)
+        AXUIElementSetMessagingTimeout(application, 0.5)
+        guard let value = attribute(kAXFocusedUIElementAttribute, of: application),
+              CFGetTypeID(value) == AXUIElementGetTypeID() else { return nil }
+        // Embedded web content can be hosted by a different process. The app's
+        // focused-element attribute is authoritative; don't reject its child PID.
+        let element = unsafeDowncast(value, to: AXUIElement.self)
+        AXUIElementSetMessagingTimeout(element, 0.5)
+        return element
+    }
+
+    private func attribute(_ name: String, of element: AXUIElement) -> CFTypeRef? {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, name as CFString, &value) == .success else { return nil }
+        return value
+    }
+
+    private func snapshot(of element: AXUIElement) -> InsertionSnapshot {
+        var selection: NSRange?
+        if let object = attribute(kAXSelectedTextRangeAttribute, of: element), CFGetTypeID(object) == AXValueGetTypeID() {
+            let rangeValue = unsafeDowncast(object, to: AXValue.self)
+            var range = CFRange()
+            if AXValueGetValue(rangeValue, .cfRange, &range) {
+                selection = NSRange(location: range.location, length: range.length)
+            }
+        }
+        return InsertionSnapshot(value: attribute(kAXValueAttribute, of: element) as? String, selection: selection)
+    }
+
+    func insert(_ text: String, into target: TextInsertionService.Target, expectedValue: String?) async -> Bool {
+        guard matches(target), await MainActor.run(body: { NSWorkspace.shared.frontmostApplication?.processIdentifier == target.pid }) else { return false }
+        let element = target.element
+        let result = AXUIElementSetAttributeValue(element, kAXSelectedTextAttribute as CFString, text as CFTypeRef)
+        if result == .success { return true }
+        // Only unsupported attributes are safe to fall back from; other errors may
+        // represent an edit that was already partly applied.
+        guard result == .attributeUnsupported || result == .notImplemented,
+              let expectedValue else { return false }
+        return AXUIElementSetAttributeValue(element, kAXValueAttribute as CFString, expectedValue as CFTypeRef) == .success
+    }
+
 }
