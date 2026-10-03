@@ -1,12 +1,12 @@
 # Pipet
 
-**Your voice, wherever you type.** A small native macOS dictation app by vietbrosinaus, built on [Codex Voice](https://github.com/anthnykr/codex-voice) by [Anthony Kroeger](https://github.com/anthnykr) (anthnykr), the GOAT.
+**Your voice, wherever you type.** A small native macOS dictation app by viciousbuilders, built on [Codex Voice](https://github.com/anthnykr/codex-voice) by [Anthony Kroeger](https://github.com/anthnykr) (anthnykr), the GOAT.
 
 Hold **Control-M**, speak, and release to insert a transcript at your cursor. Pipet lives in the menu bar, with a practice area, setup status, optional launch at login, and last-transcript recovery. It never automatically sends messages or submits forms.
 
 ## Download
 
-[Install Pipet](https://vietbrosinaus.com/pipet) · [Latest release](https://github.com/vietbrosinaus/pipet/releases/latest)
+[Install Pipet](https://viciousbuilders.com/pipet) · [Latest release](https://github.com/viciousbuilders/pipet/releases/latest)
 
 ## Install the shared app
 
@@ -91,4 +91,4 @@ MIT. The original project's license is preserved in [LICENSE](LICENSE) and bundl
 
 Pipet builds on [Codex Voice](https://github.com/anthnykr/codex-voice), created by [Anthony Kroeger](https://github.com/anthnykr). Anthony is the GOAT behind the original project and a former colleague at Lyra. The original MIT license and upstream Git history are preserved.
 
-The download landing page lives at [vietbrosinaus.com/pipet](https://vietbrosinaus.com/pipet); its source is in [vietbrosinaus/landing-page](https://github.com/vietbrosinaus/landing-page/tree/main/src/app/pipet).
+The download landing page lives at [viciousbuilders.com/pipet](https://viciousbuilders.com/pipet); its source is in [viciousbuilders/landing-page](https://github.com/viciousbuilders/landing-page/tree/main/src/app/pipet).

@@ -56,8 +56,8 @@ struct SettingsView: View {
                 Text("Pipet").font(.system(size: 30, weight: .bold, design: .rounded))
                 HStack(spacing: 3) {
                     Text("by").foregroundStyle(PipetTheme.secondary)
-                    Link("vietbrosinaus", destination: URL(string: "https://vietbrosinaus.com")!)
-                        .help("Visit vietbrosinaus.com")
+                    Link("viciousbuilders", destination: URL(string: "https://viciousbuilders.com")!)
+                        .help("Visit viciousbuilders.com")
                 }
                 .font(.system(size: 12))
             }

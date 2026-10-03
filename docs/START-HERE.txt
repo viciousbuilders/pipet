@@ -1,6 +1,6 @@
 PIPET
 Your voice, wherever you type.
-Made by vietbrosinaus
+Made by viciousbuilders
 
 INSTALL
 1. Open the DMG and drag Pipet into Applications.

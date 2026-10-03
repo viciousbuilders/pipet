@@ -51,7 +51,7 @@ struct PipetPreferencesView: View {
                 }
                 Section("About") {
                     LabeledContent("Pipet", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.2.0")
-                    Link("Made by vietbrosinaus", destination: URL(string: "https://vietbrosinaus.com")!)
+                    Link("Made by viciousbuilders", destination: URL(string: "https://viciousbuilders.com")!)
                     Text("Built on Codex Voice by Anthony Kroeger (anthnykr). Thanks to the GOAT.")
                     Link("Original project and MIT license", destination: URL(string: "https://github.com/anthnykr/codex-voice")!)
                 }
