@@ -12,7 +12,7 @@ Hold **Right Command (⌘)**, speak, and release to insert a transcript at your 
 
 Open the DMG, drag **Pipet** into **Applications**, eject the DMG, and open the installed app. See [START-HERE.txt](docs/START-HERE.txt) for the full instructions.
 
-Pipet 0.3.2 is **Developer ID signed and Apple-notarized**, with notarization tickets attached to the app and DMG. macOS Gatekeeper accepts both. Earlier 0.2.x development previews were locally signed and required Open Anyway.
+Pipet 0.3.3 is **Developer ID signed and Apple-notarized**, with notarization tickets attached to the app and DMG. macOS Gatekeeper accepts both. Earlier 0.2.x development previews were locally signed and required Open Anyway.
 
 Requirements: macOS 14+, an internet connection, and your own Codex CLI sign-in. The universal app contains Apple silicon and Intel binaries; Intel has not been tested on physical hardware here. Follow [Codex CLI setup](https://developers.openai.com/codex/cli/) and run `codex login` before dictating.
 
@@ -20,7 +20,7 @@ Allow **Microphone** and enable the installed **Pipet** app under **Privacy & Se
 
 Quit Spokenly or change its recording shortcut before using Pipet: both can listen for Right Command. Pipet has its own identity and requires its own permissions.
 
-The source and local build now use Right Command instead of the Control-M shortcut in the published 0.3.2 download. Hold it briefly to start listening; quick taps and ordinary Command combinations do not submit dictation. Pressing another key or modifier while recording cancels that recording, so Command-C and Command-V still reach the active app. The left Command key does not start dictation.
+Pipet 0.3.3 uses Right Command instead of the Control-M shortcut from earlier releases. Hold it briefly to start listening; quick taps and ordinary Command combinations do not submit dictation. Pressing another key or modifier while recording cancels that recording, so Command-C and Command-V still reach the active app. The left Command key does not start dictation.
 
 ## Build and install locally
 
@@ -42,7 +42,7 @@ The included Xcode project is also maintained. `project.yml` is the XcodeGen sou
 ./scripts/package-release.sh
 ```
 
-Creates `dist/Pipet-0.3.2/` containing the universal `.app`, `.dmg`, `.zip`, setup instructions, MIT license, and SHA-256 checksums. Release files use a strict whitelist: no credentials, recordings, development caches or local logs are copied. Existing release directories are not overwritten.
+Creates `dist/Pipet-0.3.3/` containing the universal `.app`, `.dmg`, `.zip`, setup instructions, MIT license, and SHA-256 checksums. Release files use a strict whitelist: no credentials, recordings, development caches or local logs are copied. Existing release directories are not overwritten.
 
 For a notarized release, configure a **Developer ID Application** signing certificate and a `notarytool` Keychain profile, then run:
 
