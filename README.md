@@ -2,7 +2,7 @@
 
 **Your voice, wherever you type.** A small native macOS dictation app by viciousbuilders, built on [Codex Voice](https://github.com/anthnykr/codex-voice) by [Anthony Kroeger](https://github.com/anthnykr) (anthnykr), the GOAT.
 
-Hold **Control-M**, speak, and release to insert a transcript at your cursor. Pipet lives in the menu bar, with a practice area, setup status, optional launch at login, and last-transcript recovery. It never automatically sends messages or submits forms.
+Hold **Right Command (⌘)**, speak, and release to insert a transcript at your cursor. Press **Esc** while holding to cancel without sending audio. Pipet lives in the menu bar, with a practice area, setup status, optional launch at login, and last-transcript recovery. It never automatically sends messages or submits forms.
 
 ## Download
 
@@ -18,7 +18,9 @@ Requirements: macOS 14+, an internet connection, and your own Codex CLI sign-in.
 
 Allow **Microphone** and enable the installed **Pipet** app under **Privacy & Security → Accessibility**. Click the speech-bubble menu-bar icon to open Pipet.
 
-If you also have Codex Voice running, quit it first: both use Control-M. Pipet has its own identity and requires its own permissions.
+Quit Spokenly or change its recording shortcut before using Pipet: both can listen for Right Command. Pipet has its own identity and requires its own permissions.
+
+The source and local build now use Right Command instead of the Control-M shortcut in the published 0.3.2 download. Hold it briefly to start listening; quick taps and ordinary Command combinations do not submit dictation. Pressing another key or modifier while recording cancels that recording, so Command-C and Command-V still reach the active app. The left Command key does not start dictation.
 
 ## Build and install locally
 
@@ -58,6 +60,8 @@ To finish notarizing an existing signed release, run `PIPET_NOTARY_PROFILE=Pipet
 
 ```bash
 ./scripts/check-text-insertion.sh
+./scripts/check-hotkey.sh
+./scripts/check-settings-refresh.sh
 ./scripts/check-transcription.sh
 ./scripts/check-transcription.sh --refresh
 .build/Pipet.app/Contents/MacOS/Pipet --check-insertion
@@ -68,6 +72,8 @@ To finish notarizing an existing signed release, run `PIPET_NOTARY_PROFILE=Pipet
 The live insertion check opens its own native test fields and checks selected-text paste, changed focus and selection, clipboard restoration, concurrent copying, and the direct-insertion override. It requires Accessibility permission and uninterrupted foreground focus. For a web check, open `Tests/web-insertion.html` in a browser, click its marked editor, and run `.build/Pipet.app/Contents/MacOS/Pipet --check-web-insertion`; the page should record an input event.
 
 The transcription check sends a generated test sentence through the same Swift service as the app; it does not use your microphone. The app diagnostic verifies its bundled icon and logo.
+
+The settings refresh check verifies that unchanged permissions and sign-in do not publish redundant UI updates, while real changes still update the interface. Settings refresh on launch, window focus, app activation, and explicit permission actions instead of polling in the background.
 
 UI previews cover setup and ready states, light and dark modes, Settings, and a small resizable window. Live microphone and insertion require macOS permissions granted to the Pipet app.
 

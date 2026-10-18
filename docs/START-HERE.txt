@@ -23,7 +23,10 @@ BEFORE YOU DICTATE
   System Settings > Privacy & Security > Accessibility.
 
 DICTATE
-Click a text field. Hold Control-M, speak, and release.
+Click a text field. Hold Right Command, speak, and release.
+Press Esc while holding to cancel without sending audio.
+Use the Command key on the right of the space bar. Quick taps do nothing;
+other keys or modifiers cancel the recording, leaving normal shortcuts alone.
 Most editable text fields accept insertion. Secure fields and apps that
 block Accessibility or paste may require manual entry.
 Use Pipet's practice field to try it out.
@@ -31,9 +34,10 @@ If insertion fails or you switch apps during transcription, use
 Copy Last Transcript in the menu bar or Copy in the Pipet window.
 Pipet never automatically sends a message or submits a form.
 
-IF YOU USED CODEX VOICE BEFORE
-Quit Codex Voice before opening Pipet. They share the Control-M shortcut.
-Pipet has a new app identity, so grant permissions to Pipet itself.
+IF YOU ALSO USE SPOKENLY
+Quit Spokenly or change its recording shortcut before using Pipet.
+Both can listen for Right Command and start recording together.
+If you used Codex Voice before, grant permissions to Pipet itself.
 
 IF THE ACCESSIBILITY SWITCH IS ON BUT INSERTION IS BLOCKED
 Quit Pipet. Remove its old entry from Accessibility with the minus button,

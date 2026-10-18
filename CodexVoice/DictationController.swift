@@ -42,6 +42,7 @@ final class DictationController {
 
     var onStateChange: ((State) -> Void)?
     private var hotkeyHeld = false
+    private var recordingCancelled = false
     private var targetPID: pid_t?
     private var insertionTarget: TextInsertionService.Target?
     private(set) var lastTranscript: String?
@@ -69,6 +70,7 @@ final class DictationController {
 
         DebugLogger.write("Hotkey pressed")
         hotkeyHeld = true
+        recordingCancelled = false
         targetPID = NSWorkspace.shared.frontmostApplication?.processIdentifier
         insertionTarget = nil
         state = .starting
@@ -90,17 +92,41 @@ final class DictationController {
         }
     }
 
+    func cancelRecording() {
+        switch state {
+        case .starting:
+            // Keep starting occupied until beginDictation returns from its
+            // pending permission/target work, so a new recording cannot race it.
+            hotkeyHeld = false
+            recordingCancelled = true
+            audioCaptureService.cancel()
+        case .recording:
+            hotkeyHeld = false
+            recordingCancelled = true
+            audioCaptureService.cancel()
+            insertionTarget = nil
+            state = .idle
+        case .idle, .transcribing, .inserting, .error:
+            break
+        }
+    }
+
     private func beginDictation() async {
         do {
             guard case .trusted = permissionCoordinator.accessibilityStatus(promptIfNeeded: false) else {
                 state = .error("Open Pipet and enable text insertion to get started.")
                 return
             }
-            guard let targetPID, let target = await textInsertionService.captureTarget(expectedPID: targetPID) else {
-                state = .error("Click an editable field before holding Control-M. Secure fields are not supported.")
+            let target = if let targetPID {
+                await textInsertionService.captureTarget(expectedPID: targetPID)
+            } else {
+                nil as TextInsertionService.Target?
+            }
+            guard hotkeyHeld, !recordingCancelled else { state = .idle; return }
+            guard let target else {
+                state = .error("Click an editable field before holding Right Command. Secure fields are not supported.")
                 return
             }
-            guard hotkeyHeld else { state = .idle; return }
             insertionTarget = target
             try await audioCaptureService.start()
             guard hotkeyHeld else {
@@ -110,6 +136,7 @@ final class DictationController {
             }
             state = .recording
         } catch {
+            if recordingCancelled { state = .idle; return }
             if case AudioCaptureError.authorizationDenied = error {
                 permissionCoordinator.openMicrophoneSettings()
             }

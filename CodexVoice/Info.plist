@@ -29,7 +29,7 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Pipet uses your microphone while you hold Control-M to dictate text.</string>
+	<string>Pipet uses your microphone while you hold Right Command to dictate text.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 </dict>

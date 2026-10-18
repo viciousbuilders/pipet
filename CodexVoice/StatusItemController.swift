@@ -29,12 +29,12 @@ final class StatusItemController {
     private func configureButton() {
         statusItem.button?.image = NSImage(systemSymbolName: "bubble.left.fill", accessibilityDescription: "Pipet")
         statusItem.button?.image?.isTemplate = true
-        statusItem.button?.toolTip = "Pipet. Hold Control-M to dictate."
+        statusItem.button?.toolTip = "Pipet. Hold Right Command to dictate."
     }
 
     private func configureMenu() {
         let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "Hold Control-M to dictate", action: nil, keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "Hold Right Command to dictate", action: nil, keyEquivalent: ""))
         menu.addItem(.separator())
         let copyItem = NSMenuItem(title: "Copy Last Transcript", action: #selector(copyLastTranscript), keyEquivalent: "")
         copyItem.target = self
@@ -89,8 +89,12 @@ final class StatusItemController {
             let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 760), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
             window.title = "Pipet"
             window.isReleasedWhenClosed = false
-            window.contentViewController = NSHostingController(rootView: SettingsView())
-            window.minSize = NSSize(width: 520, height: 620)
+            let host = NSHostingController(rootView: SettingsView())
+            // AppKit owns this resizable window's bounds. Avoid extra SwiftUI
+            // minimum/ideal/maximum-size measurements on each view update.
+            host.sizingOptions = []
+            window.contentViewController = host
+            window.contentMinSize = NSSize(width: 520, height: 600)
             window.center()
             settingsWindow = window
         }

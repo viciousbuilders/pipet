@@ -7,7 +7,6 @@ struct SettingsView: View {
     @State private var practice = ""
     @State private var copied = false
     @FocusState private var practiceFocused: Bool
-    private let timer = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
 
     init(model: PipetModel = .shared, initialTab: String = "Dictation") {
         self.model = model
@@ -38,13 +37,13 @@ struct SettingsView: View {
         .background(PipetTheme.background)
         .frame(minWidth: 520, idealWidth: 620, minHeight: 600, idealHeight: 760)
         .task { model.refreshPermissions(); await model.refreshCodex() }
-        .onReceive(timer) { _ in
-            model.refreshPermissions()
-            Task { await model.refreshCodex() }
-        }
         .onChange(of: model.lastTranscript) { _, _ in copied = false }
         .onChange(of: tab) { _, _ in practiceFocused = false }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            model.refreshAccess()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
+            // Opening an existing window need not activate the app or rerun .task.
             model.refreshAccess()
         }
     }
@@ -76,7 +75,7 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Say it. See it typed.")
                     .font(.system(size: 26, weight: .semibold, design: .rounded))
-                Text("Click a text field in any app. Hold Control-M, speak, and release to insert your words.")
+                Text("Click a text field in any app. Hold Right Command, speak, and release to insert your words. Press Esc while holding to cancel.")
                     .foregroundStyle(PipetTheme.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .lineSpacing(3)
@@ -98,7 +97,7 @@ struct SettingsView: View {
                 }
                 ZStack(alignment: .topLeading) {
                     if practice.isEmpty && !practiceFocused {
-                        Text("Click here, hold Control-M, and say something.")
+                        Text("Click here, hold Right Command, and say something.")
                             .foregroundStyle(PipetTheme.secondary)
                             .padding(.horizontal, 10).padding(.vertical, 10)
                             .allowsHitTesting(false)
@@ -108,7 +107,7 @@ struct SettingsView: View {
                         .scrollIndicators(.hidden)
                         .padding(5).focused($practiceFocused)
                         .accessibilityLabel("Practice dictation text")
-                        .accessibilityHint("Click here, then hold Control M and speak. Release to insert the transcript.")
+                        .accessibilityHint("Click here, then hold Right Command and speak. Release to insert the transcript.")
                 }
                 .frame(height: 100)
                 .background(PipetTheme.inset.opacity(0.5), in: RoundedRectangle(cornerRadius: 10))
@@ -129,7 +128,7 @@ struct SettingsView: View {
         case .starting:
             status("Starting your microphone…", symbol: "mic", color: PipetTheme.accent)
         case .recording:
-            status("Listening. Release Control-M when you’re done.", symbol: "waveform", color: PipetTheme.accent)
+            status("Listening. Release Right Command to insert, or press Esc to cancel.", symbol: "waveform", color: PipetTheme.accent)
         case .transcribing:
             status("Turning your voice into words…", symbol: "ellipsis.bubble", color: PipetTheme.accent)
         case .inserting:

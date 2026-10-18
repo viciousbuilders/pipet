@@ -21,19 +21,29 @@ final class PipetModel: ObservableObject {
     @Published var insertionOverrides = InsertionPreferences().overrides
     private let permissions = PermissionCoordinator()
     private let auth = CodexAuthService()
+    private var refreshingCodex = false
 
     var ready: Bool { microphoneReady && accessibilityReady && codexReady }
     var readyCount: Int { [microphoneReady, accessibilityReady, codexReady].filter { $0 }.count }
 
     func refreshPermissions() {
-        microphoneReady = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
-        accessibilityReady = AXIsProcessTrusted()
-        loginEnabled = SMAppService.mainApp.status == .enabled
+        let microphone = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
+        let accessibility = AXIsProcessTrusted()
+        let login = SMAppService.mainApp.status == .enabled
+        // @Published sends even when assigned its existing value. Avoid rebuilding
+        // every settings section when returning from another app changes nothing.
+        if microphoneReady != microphone { microphoneReady = microphone }
+        if accessibilityReady != accessibility { accessibilityReady = accessibility }
+        if loginEnabled != login { loginEnabled = login }
     }
 
     func refreshCodex() async {
-        codexReady = (try? await auth.currentCredentials()) != nil
-        checkingCodex = false
+        guard !refreshingCodex else { return }
+        refreshingCodex = true
+        defer { refreshingCodex = false }
+        let ready = (try? await auth.currentCredentials()) != nil
+        if codexReady != ready { codexReady = ready }
+        if checkingCodex { checkingCodex = false }
     }
 
     func allowMicrophone() {

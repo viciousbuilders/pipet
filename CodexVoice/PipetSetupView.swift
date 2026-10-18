@@ -11,7 +11,7 @@ struct PipetSetupView: View {
                     Spacer()
                     Text("\(model.readyCount) of 3 ready").font(.system(size: 12)).foregroundStyle(PipetTheme.secondary)
                 }
-                row(title: "Microphone", detail: model.microphoneReady ? "Pipet can hear you while you hold the shortcut." : "Only listens while you hold Control-M.", icon: "mic", ready: model.microphoneReady) {
+                row(title: "Microphone", detail: model.microphoneReady ? "Pipet can hear you while you hold the shortcut." : "Only listens while you hold Right Command.", icon: "mic", ready: model.microphoneReady) {
                     if model.requestingMicrophone {
                         ProgressView().controlSize(.small).accessibilityLabel("Requesting microphone access")
                     } else if !model.microphoneReady {

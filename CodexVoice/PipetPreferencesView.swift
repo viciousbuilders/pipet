@@ -9,7 +9,7 @@ struct PipetPreferencesView: View {
             Form {
                 Section("Everyday use") {
                     Toggle("Open Pipet when I log in", isOn: Binding(get: { model.loginEnabled }, set: { model.setOpenAtLogin($0) }))
-                    Text("Pipet lives in your menu bar. Hold Control-M in any editable text field to dictate.")
+                    Text("Pipet lives in your menu bar. Hold Right Command in any editable text field to dictate.")
                         .foregroundStyle(PipetTheme.secondary)
                 }
                 Section("Text insertion") {
@@ -45,7 +45,7 @@ struct PipetPreferencesView: View {
                     }
                 }
                 Section("Your words stay yours") {
-                    Text("Pipet reads your local Codex sign-in to transcribe using your account. Audio is sent to OpenAI after you release Control-M. An internet connection is required.")
+                    Text("Pipet reads your local Codex sign-in to transcribe using your account. Audio is sent to OpenAI after you release Right Command. An internet connection is required.")
                     Text("Temporary audio is deleted after each attempt. Your last transcript stays in memory until you quit. Pipet does not automatically send messages or submit forms.")
                     Text("Clipboard contents are restored after insertion, unless you copy something else in the meantime.")
                 }

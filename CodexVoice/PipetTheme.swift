@@ -42,16 +42,12 @@ struct PipetLogo: View {
 
 struct ShortcutKeys: View {
     var body: some View {
-        HStack(spacing: 6) {
-            key("⌃", label: "Control")
-            Text("+").foregroundStyle(PipetTheme.secondary)
-            key("M", label: "M")
-        }.accessibilityElement(children: .ignore).accessibilityLabel("Hold Control M to dictate")
-    }
-    private func key(_ text: String, label: String) -> some View {
-        Text(text).font(.system(size: 17, weight: .semibold, design: .rounded))
-            .frame(width: 38, height: 34)
+        Text("Right ⌘").font(.system(size: 17, weight: .semibold, design: .rounded))
+            .fixedSize()
+            .padding(.horizontal, 12)
+            .frame(height: 34)
             .background(PipetTheme.surface, in: RoundedRectangle(cornerRadius: 8))
             .overlay(RoundedRectangle(cornerRadius: 8).stroke(PipetTheme.rule, lineWidth: 1))
+            .accessibilityLabel("Hold the right Command key to dictate")
     }
 }

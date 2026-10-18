@@ -58,7 +58,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let index = arguments.firstIndex(of: "--restart-from"), arguments.count > index + 1,
            let pid = Int32(arguments[index + 1]), pid != ProcessInfo.processInfo.processIdentifier {
             Task {
-                // Let the previous instance release Control-M before registering it.
+                // Let the previous instance release Right Command before registering it.
                 for _ in 0..<100 {
                     guard let previous = NSRunningApplication(processIdentifier: pid), !previous.isTerminated else { break }
                     try? await Task.sleep(for: .milliseconds(100))

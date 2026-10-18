@@ -24,11 +24,17 @@ final class AppController {
         },
         onRelease: { [weak self] in
             self?.dictationController.handleHotkeyReleased()
+        },
+        onCancel: { [weak self] in
+            self?.dictationController.cancelRecording()
         }
     )
 
     func openWindow() { statusItemController.openSettings() }
-    func stop() { audioCaptureService.cancel() }
+    func stop() {
+        hotkeyMonitor.stop()
+        audioCaptureService.cancel()
+    }
 
     func start() {
         DebugLogger.clear()
