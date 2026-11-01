@@ -28,6 +28,11 @@ final class AppController {
     )
 
     func openWindow() { statusItemController.openSettings() }
+    func prepareToQuit() async {
+        stop()
+        await audioCaptureService.waitForPlaybackRestoration()
+    }
+
     func stop() {
         hotkeyMonitor.stop()
         audioCaptureService.cancel()

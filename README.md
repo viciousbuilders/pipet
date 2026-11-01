@@ -42,7 +42,7 @@ The included Xcode project is also maintained. `project.yml` is the XcodeGen sou
 ./scripts/package-release.sh
 ```
 
-Creates `dist/Pipet-0.3.4/` containing the universal `.app`, `.dmg`, `.zip`, setup instructions, MIT license, and SHA-256 checksums. Release files use a strict whitelist: no credentials, recordings, development caches or local logs are copied. Existing release directories are not overwritten.
+Creates `dist/Pipet-0.3.5/` containing the universal `.app`, `.dmg`, `.zip`, setup instructions, MIT license, and SHA-256 checksums. Release files use a strict whitelist: no credentials, recordings, development caches or local logs are copied. Existing release directories are not overwritten.
 
 For a notarized release, configure a **Developer ID Application** signing certificate and a `notarytool` Keychain profile, then run:
 
@@ -98,3 +98,7 @@ MIT. The original project's license is preserved in [LICENSE](LICENSE) and bundl
 Pipet builds on [Codex Voice](https://github.com/anthnykr/codex-voice), created by [Anthony Kroeger](https://github.com/anthnykr). Anthony is the GOAT behind the original project and a former colleague at Lyra. The original MIT license and upstream Git history are preserved.
 
 The download landing page lives at [viciousbuilders.com/pipet](https://viciousbuilders.com/pipet); its source is in [viciousbuilders/landing-page](https://github.com/viciousbuilders/landing-page/tree/main/src/app/pipet).
+
+While listening, Pipet asks macOS Now Playing to pause an active player and resumes that same player after recording stops or is cancelled. Already-paused media stays paused. This is best-effort: macOS versions and players that do not expose playback state and player identity are left alone; arbitrary laptop audio is not muted. Quitting Pipet also attempts restoration.
+
+An insertion that is sent but cannot be verified now dismisses the recording overlay without showing a failure. Empty fields can be verified even without an Accessibility selection range. Actual insertion errors still offer transcript recovery.

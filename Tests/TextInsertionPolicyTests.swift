@@ -48,6 +48,8 @@ struct TextInsertionPolicyTests {
         preferences.set(.automatic, for: "dev.custom.editor")
         precondition(preferences.writeMethod(for: "dev.custom.editor") == .automatic)
 
+        precondition(InsertionSnapshot(value: "", selection: nil).expectedValue(inserting: "hello") == "hello")
+        precondition(InsertionSnapshot(value: "existing", selection: nil).expectedValue(inserting: "hello") == nil)
         let emoji = InsertionSnapshot(value: "Hi 🐱 there", selection: NSRange(location: 3, length: 2))
         precondition(emoji.expectedValue(inserting: "世界") == "Hi 世界 there", "Ranges must use UTF-16")
         let caret = InsertionSnapshot(value: "abc", selection: NSRange(location: 3, length: 0))

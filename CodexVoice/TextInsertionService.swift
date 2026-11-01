@@ -42,6 +42,9 @@ struct InsertionSnapshot: Equatable, Sendable {
     let selection: NSRange?
 
     func expectedValue(inserting text: String) -> String? {
+        // Empty editors have only one possible insertion point, even when
+        // Electron omits AXSelectedTextRange. Never guess in nonempty fields.
+        if value == "", selection == nil { return text }
         guard let value, let selection else { return nil }
         let current = value as NSString
         // Accessibility ranges use UTF-16, not Swift character counts.

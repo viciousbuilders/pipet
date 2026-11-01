@@ -196,10 +196,10 @@ final class DictationController {
         switch permissionCoordinator.accessibilityStatus(promptIfNeeded: true) {
         case .trusted:
             switch await textInsertionService.insert(transcript, into: insertionTarget) {
-            case .confirmed:
+            case .confirmed, .unverified:
+                // Missing AX confirmation is not evidence that insertion failed.
+                // Never retry automatically: the text may already be in the editor.
                 state = .idle
-            case .unverified:
-                state = .error("Insertion could not be verified. Check the field before using Copy Last Transcript.")
             case .failed(let message):
                 state = .error(message)
             }
