@@ -12,7 +12,7 @@ Tap **Right Command (⌘)** once to start recording, speak, then tap it again to
 
 Open the DMG, drag **Pipet** into **Applications**, eject the DMG, and open the installed app. See [START-HERE.txt](docs/START-HERE.txt) for the full instructions.
 
-The published Pipet 0.3.3 release is **Developer ID signed and Apple-notarized**, with notarization tickets attached to the app and DMG. macOS Gatekeeper accepts both. Earlier 0.2.x development previews were locally signed and required Open Anyway.
+Pipet 0.3.4 is **Developer ID signed and Apple-notarized**, with notarization tickets attached to the app and DMG. macOS Gatekeeper accepts both. Earlier 0.2.x development previews were locally signed and required Open Anyway.
 
 Requirements: macOS 14+, an internet connection, and your own Codex CLI sign-in. The universal app contains Apple silicon and Intel binaries; Intel has not been tested on physical hardware here. Follow [Codex CLI setup](https://developers.openai.com/codex/cli/) and run `codex login` before dictating.
 
