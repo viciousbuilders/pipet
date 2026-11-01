@@ -9,11 +9,11 @@ struct PipetPreferencesView: View {
             Form {
                 Section("Everyday use") {
                     Toggle("Open Pipet when I log in", isOn: Binding(get: { model.loginEnabled }, set: { model.setOpenAtLogin($0) }))
-                    Text("Pipet lives in your menu bar. Hold Right Command in any editable text field to dictate.")
+                    Text("Pipet lives in your menu bar. Tap Right Command in any editable text field to start, then tap it again to transcribe.")
                         .foregroundStyle(PipetTheme.secondary)
                 }
                 Section("Text insertion") {
-                    Text("Paste is the default for every app, including web editors. If an app blocks paste, add it below and choose Direct insertion.")
+                    Text("T3 Code and Claude use Accessibility to find your editor, then paste automatically so the app receives your words correctly. Add an app below to choose its method.")
                         .foregroundStyle(PipetTheme.secondary)
                     ForEach(model.insertionOverrides.keys.sorted(), id: \.self) { bundleID in
                         HStack {
@@ -21,6 +21,7 @@ struct PipetPreferencesView: View {
                                 get: { InsertionMethod(rawValue: model.insertionOverrides[bundleID] ?? "") ?? .paste },
                                 set: { model.setInsertionMethod($0, for: bundleID) }
                             )) {
+                                Text("Automatic").tag(InsertionMethod.automatic)
                                 Text("Paste").tag(InsertionMethod.paste)
                                 Text("Direct insertion").tag(InsertionMethod.accessibility)
                             }
@@ -39,13 +40,13 @@ struct PipetPreferencesView: View {
                         Button("Open Settings") { model.allowMicrophone() }
                     }
                     HStack {
-                        Label("Text insertion", systemImage: "text.cursor")
+                        Label("Accessibility", systemImage: "text.cursor")
                         Spacer()
                         Button("Open Settings") { model.allowAccessibility() }
                     }
                 }
                 Section("Your words stay yours") {
-                    Text("Pipet reads your local Codex sign-in to transcribe using your account. Audio is sent to OpenAI after you release Right Command. An internet connection is required.")
+                    Text("Pipet reads your local Codex sign-in to transcribe using your account. Audio is sent to OpenAI after you tap Right Command again. An internet connection is required.")
                     Text("Temporary audio is deleted after each attempt. Your last transcript stays in memory until you quit. Pipet does not automatically send messages or submit forms.")
                     Text("Clipboard contents are restored after insertion, unless you copy something else in the meantime.")
                 }

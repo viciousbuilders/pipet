@@ -2,7 +2,7 @@
 
 **Your voice, wherever you type.** A small native macOS dictation app by viciousbuilders, built on [Codex Voice](https://github.com/anthnykr/codex-voice) by [Anthony Kroeger](https://github.com/anthnykr) (anthnykr), the GOAT.
 
-Hold **Right Command (⌘)**, speak, and release to insert a transcript at your cursor. Press **Esc** while holding to cancel without sending audio. Pipet lives in the menu bar, with a practice area, setup status, optional launch at login, and last-transcript recovery. It never automatically sends messages or submits forms.
+Tap **Right Command (⌘)** once to start recording, speak, then tap it again to transcribe and insert at your cursor. Press **Esc** to cancel without sending audio. Pipet lives in the menu bar, with a practice area, setup status, optional launch at login, and last-transcript recovery. It never automatically sends messages or submits forms.
 
 ## Download
 
@@ -12,7 +12,7 @@ Hold **Right Command (⌘)**, speak, and release to insert a transcript at your 
 
 Open the DMG, drag **Pipet** into **Applications**, eject the DMG, and open the installed app. See [START-HERE.txt](docs/START-HERE.txt) for the full instructions.
 
-Pipet 0.3.3 is **Developer ID signed and Apple-notarized**, with notarization tickets attached to the app and DMG. macOS Gatekeeper accepts both. Earlier 0.2.x development previews were locally signed and required Open Anyway.
+The published Pipet 0.3.3 release is **Developer ID signed and Apple-notarized**, with notarization tickets attached to the app and DMG. macOS Gatekeeper accepts both. Earlier 0.2.x development previews were locally signed and required Open Anyway.
 
 Requirements: macOS 14+, an internet connection, and your own Codex CLI sign-in. The universal app contains Apple silicon and Intel binaries; Intel has not been tested on physical hardware here. Follow [Codex CLI setup](https://developers.openai.com/codex/cli/) and run `codex login` before dictating.
 
@@ -20,7 +20,7 @@ Allow **Microphone** and enable the installed **Pipet** app under **Privacy & Se
 
 Quit Spokenly or change its recording shortcut before using Pipet: both can listen for Right Command. Pipet has its own identity and requires its own permissions.
 
-Pipet 0.3.3 uses Right Command instead of the Control-M shortcut from earlier releases. Hold it briefly to start listening; quick taps and ordinary Command combinations do not submit dictation. Pressing another key or modifier while recording cancels that recording, so Command-C and Command-V still reach the active app. The left Command key does not start dictation.
+Pipet 0.3.4 changes Right Command from hold-to-talk to tap-to-toggle. Tap it once to start listening and again to stop and transcribe. Ordinary Command combinations do not toggle recording, so Command-C and Command-V still reach the active app. Esc cancels recording; switching apps, locking the session, or sleeping also cancels to protect the insertion destination. The left Command key does not start dictation.
 
 ## Build and install locally
 
@@ -42,7 +42,7 @@ The included Xcode project is also maintained. `project.yml` is the XcodeGen sou
 ./scripts/package-release.sh
 ```
 
-Creates `dist/Pipet-0.3.3/` containing the universal `.app`, `.dmg`, `.zip`, setup instructions, MIT license, and SHA-256 checksums. Release files use a strict whitelist: no credentials, recordings, development caches or local logs are copied. Existing release directories are not overwritten.
+Creates `dist/Pipet-0.3.4/` containing the universal `.app`, `.dmg`, `.zip`, setup instructions, MIT license, and SHA-256 checksums. Release files use a strict whitelist: no credentials, recordings, development caches or local logs are copied. Existing release directories are not overwritten.
 
 For a notarized release, configure a **Developer ID Application** signing certificate and a `notarytool` Keychain profile, then run:
 
@@ -52,7 +52,7 @@ PIPET_NOTARY_PROFILE='pipet-notary' \
 ./scripts/package-release.sh
 ```
 
-Apple's requirements and account setup: [Developer ID](https://developer.apple.com/developer-id/). This Mac has a valid Developer ID identity and a configured `Pipet` Keychain credential profile. Use the signing identity when building future updates to preserve the permission identity; notarize each release before sharing it.
+Apple's requirements and account setup: [Developer ID](https://developer.apple.com/developer-id/). Public releases require a valid Developer ID identity and a configured `Pipet` Keychain credential profile. Use the signing identity when building future updates to preserve the permission identity; notarize each release before sharing it.
 
 To finish notarizing an existing signed release, run `PIPET_NOTARY_PROFILE=Pipet ./scripts/notarize-release.sh /absolute/path/to/release-directory`. The script checks Apple’s acceptance, attaches tickets, verifies Gatekeeper acceptance, rebuilds the ZIP, and updates checksums.
 
@@ -79,11 +79,11 @@ UI previews cover setup and ready states, light and dark modes, Settings, and a 
 
 ## Privacy and limitations
 
-Audio goes to the Codex transcription backend after you release the shortcut. Temporary WAV recordings are deleted after each attempt. Your latest transcript remains in memory until you quit. Clipboard contents are restored after paste unless you copy something else in the meantime. Pipet captures the app, focused field, readable text, and selection when recording starts. If the destination or its readable contents change before insertion, Pipet stops and keeps **Copy Last Transcript** available. Fields that do not expose their contents cannot be fully verified; check the field before copying to avoid duplicates. Pipet never automatically retries an uncertain insertion.
+Audio goes to the Codex transcription backend after you tap the shortcut a second time. Temporary WAV recordings are deleted after each attempt. Your latest transcript remains in memory until you quit. Clipboard contents are restored after paste unless you copy something else in the meantime. Pipet captures the app, focused field, readable text, and selection when recording starts. If the destination or its readable contents change before insertion, Pipet stops and keeps **Copy Last Transcript** available. Fields that do not expose their contents cannot be fully verified; check the field before copying to avoid duplicates. Pipet never automatically retries an uncertain insertion.
 
 Authentication is read from `$CODEX_HOME/auth.json` or `~/.codex/auth.json`, using each person's own account. Expired authentication is refreshed with a bounded Codex CLI handshake. CLI discovery supports `CODEX_CLI_PATH`, PATH, `~/.local/bin`, Homebrew locations, and the original Codex desktop app resource path.
 
-This remains an experimental, undocumented transcription endpoint. It works in current testing but could change or stop being available. Pipet uses normal paste by default in every app, so web editors receive paste events and update their JavaScript state. In Settings → Text insertion, add an app and choose **Direct insertion** if it blocks paste. Remove an override to restore the default. Pipet waits for shortcut modifiers to be released, checks the destination again immediately before insertion, and restores the clipboard only if it has not changed. Accessibility operations run on a dedicated worker with bounded IPC waits, so a slow editor does not block Pipet’s interface. When a field exposes its value and selection, Pipet checks the expected replacement after insertion. Otherwise it reports that insertion could not be verified and keeps the transcript for manual recovery. Most editable fields accept one of these methods; secure fields or apps that block both may require manual entry.
+This remains an experimental, undocumented transcription endpoint. It works in current testing but could change or stop being available. Pipet automatically enables Electron’s Accessibility tree for T3 Code and Claude, resolves the focused editor, and pastes automatically in those apps so their JavaScript editors receive input events. Direct Accessibility writes can be acknowledged without updating the visible composer, so Automatic uses paste for these two apps. Other apps use normal paste by default, so web editors receive paste events and update their JavaScript state. In Settings → Text insertion, add an app and choose **Direct insertion** if it blocks paste. Automatic uses paste for T3 Code and Claude, and tries Accessibility first in other app overrides. Remove an override to restore the app’s default. Pipet waits for shortcut modifiers to be released, checks the destination again immediately before insertion, and restores the clipboard only if it has not changed. Accessibility operations run on a dedicated worker with bounded IPC waits, so a slow editor does not block Pipet’s interface. When a field exposes its value and selection, Pipet checks the expected replacement after insertion. Otherwise it reports that insertion could not be verified and keeps the transcript for manual recovery. Most editable fields accept one of these methods; secure fields or apps that block both may require manual entry.
 
 ## Brand
 

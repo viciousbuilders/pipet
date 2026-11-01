@@ -4,12 +4,14 @@ import Carbon.HIToolbox
 import Foundation
 
 enum InsertionMethod: String, CaseIterable {
+    case automatic
     case paste
     case accessibility
 }
 
 @MainActor
 struct InsertionPreferences {
+    static let chatApps: Set<String> = ["com.t3tools.t3code", "com.anthropic.claudefordesktop"]
     static let overridesKey = "insertionMethodOverrides"
     let defaults: UserDefaults
 
@@ -18,7 +20,14 @@ struct InsertionPreferences {
     var overrides: [String: String] { defaults.dictionary(forKey: Self.overridesKey) as? [String: String] ?? [:] }
 
     func method(for bundleID: String) -> InsertionMethod {
-        InsertionMethod(rawValue: overrides[bundleID] ?? "") ?? .paste
+        InsertionMethod(rawValue: overrides[bundleID] ?? "") ?? (Self.chatApps.contains(bundleID) ? .automatic : .paste)
+    }
+
+    func writeMethod(for bundleID: String) -> InsertionMethod {
+        let selected = method(for: bundleID)
+        // Electron editors can acknowledge an AX write without notifying their
+        // JavaScript state. Paste dispatches the input events their composer needs.
+        return selected == .automatic && Self.chatApps.contains(bundleID) ? .paste : selected
     }
 
     func set(_ method: InsertionMethod?, for bundleID: String) {
@@ -82,13 +91,17 @@ final class TextInsertionService {
         }
 
         let expected = target.snapshot.expectedValue(inserting: text)
-        if InsertionPreferences().method(for: target.bundleID) == .accessibility {
-            // This explicit override never retries with paste: a partially applied AX
-            // edit must not be inserted twice.
-            guard await accessibility.insert(text, into: target, expectedValue: expected) else {
+        let method = InsertionPreferences().writeMethod(for: target.bundleID)
+        if method != .paste {
+            switch await accessibility.insert(text, into: target, expectedValue: expected) {
+            case .inserted:
+                // Never paste after an AX write, even if verification is inconclusive.
+                return await verify(expectedValue: expected, target: target)
+            case .unsupported where method == .automatic:
+                break
+            case .unsupported, .failed:
                 return .failed("Direct insertion could not be confirmed. Check the field before using Copy Last Transcript.")
             }
-            return await verify(expectedValue: expected, target: target)
         }
         return await insertViaPasteboard(text, into: target, expectedValue: expected)
     }
@@ -176,7 +189,16 @@ final class TextInsertionService {
 
 
 private actor AccessibilityClient {
-    func capture(pid: pid_t, bundleID: String) -> TextInsertionService.Target? {
+    func capture(pid: pid_t, bundleID: String) async -> TextInsertionService.Target? {
+        // Electron keeps its web accessibility tree dormant until an assistive
+        // client requests it. This does not grant macOS permissions.
+        if ["com.t3tools.t3code", "com.anthropic.claudefordesktop"].contains(bundleID) {
+            let application = AXUIElementCreateApplication(pid)
+            AXUIElementSetMessagingTimeout(application, 0.2)
+            if AXUIElementSetAttributeValue(application, "AXManualAccessibility" as CFString, kCFBooleanTrue) == .success {
+                try? await Task.sleep(for: .milliseconds(150))
+            }
+        }
         guard let element = focusedElement(in: pid),
               attribute(kAXSubroleAttribute, of: element) as? String != kAXSecureTextFieldSubrole as String else { return nil }
         return TextInsertionService.Target(pid: pid, bundleID: bundleID, element: element, snapshot: snapshot(of: element))
@@ -194,11 +216,29 @@ private actor AccessibilityClient {
         AXUIElementSetMessagingTimeout(application, 0.5)
         guard let value = attribute(kAXFocusedUIElementAttribute, of: application),
               CFGetTypeID(value) == AXUIElementGetTypeID() else { return nil }
-        // Embedded web content can be hosted by a different process. The app's
-        // focused-element attribute is authoritative; don't reject its child PID.
-        let element = unsafeDowncast(value, to: AXUIElement.self)
-        AXUIElementSetMessagingTimeout(element, 0.5)
-        return element
+        // Embedded editors may be hosted by another process. Resolve the
+        // focused container's editable descendant rather than capturing a web page.
+        let focused = unsafeDowncast(value, to: AXUIElement.self)
+        let deadline = ContinuousClock.now.advanced(by: .seconds(1))
+        return EditableTargetSearch.find(root: focused, children: { element in
+            guard ContinuousClock.now < deadline else { return nil }
+            AXUIElementSetMessagingTimeout(element, 0.1)
+            return self.attribute(kAXChildrenAttribute, of: element) as? [AXUIElement] ?? []
+        }, classify: { element in
+            guard ContinuousClock.now < deadline else { return .unavailable }
+            AXUIElementSetMessagingTimeout(element, 0.1)
+            if self.attribute(kAXSubroleAttribute, of: element) as? String == kAXSecureTextFieldSubrole as String {
+                return .blocked
+            }
+            if self.attribute(kAXEnabledAttribute, of: element) as? Bool == false { return .blocked }
+            let role = self.attribute(kAXRoleAttribute, of: element) as? String ?? ""
+            if [kAXTextFieldRole as String, kAXTextAreaRole as String, kAXComboBoxRole as String].contains(role) {
+                if self.attribute("AXEditable", of: element) as? Bool == false { return .blocked }
+                return .editor(focused: self.attribute(kAXFocusedAttribute, of: element) as? Bool == true)
+            }
+            if [kAXStaticTextRole as String, kAXButtonRole as String, "AXLink"].contains(role) { return .blocked }
+            return .container
+        })
     }
 
     private func attribute(_ name: String, of element: AXUIElement) -> CFTypeRef? {
@@ -219,16 +259,50 @@ private actor AccessibilityClient {
         return InsertionSnapshot(value: attribute(kAXValueAttribute, of: element) as? String, selection: selection)
     }
 
-    func insert(_ text: String, into target: TextInsertionService.Target, expectedValue: String?) async -> Bool {
-        guard matches(target), await MainActor.run(body: { NSWorkspace.shared.frontmostApplication?.processIdentifier == target.pid }) else { return false }
+    enum WriteResult { case inserted, unsupported, failed }
+
+    func insert(_ text: String, into target: TextInsertionService.Target, expectedValue: String?) async -> WriteResult {
+        guard matches(target), await MainActor.run(body: { NSWorkspace.shared.frontmostApplication?.processIdentifier == target.pid }) else { return .failed }
         let element = target.element
         let result = AXUIElementSetAttributeValue(element, kAXSelectedTextAttribute as CFString, text as CFTypeRef)
-        if result == .success { return true }
-        // Only unsupported attributes are safe to fall back from; other errors may
-        // represent an edit that was already partly applied.
-        guard result == .attributeUnsupported || result == .notImplemented,
-              let expectedValue else { return false }
-        return AXUIElementSetAttributeValue(element, kAXValueAttribute as CFString, expectedValue as CFTypeRef) == .success
+        if result == .success { return .inserted }
+        // Only a definitively unsupported write permits another insertion method.
+        guard result == .attributeUnsupported || result == .notImplemented else { return .failed }
+        guard let expectedValue else { return .unsupported }
+        let valueResult = AXUIElementSetAttributeValue(element, kAXValueAttribute as CFString, expectedValue as CFTypeRef)
+        if valueResult == .success { return .inserted }
+        return valueResult == .attributeUnsupported || valueResult == .notImplemented ? .unsupported : .failed
     }
+}
 
+/// Search only within the reported focus. Never guess between multiple editors.
+/// A nil children result means the inspection timed out, so fail closed.
+enum EditableTargetSearch {
+    enum Kind { case container, editor(focused: Bool), blocked, unavailable }
+
+    static func find<Node>(root: Node, children: (Node) -> [Node]?, classify: (Node) -> Kind) -> Node? {
+        var queue: [(Node, Int)] = [(root, 0)]
+        var index = 0
+        var candidates: [Node] = []
+        var focusedCandidates: [Node] = []
+        while index < queue.count {
+            guard index < 256 else { return nil }
+            let (node, depth) = queue[index]
+            index += 1
+            switch classify(node) {
+            case .unavailable: return nil
+            case .blocked: continue
+            case .editor(let focused):
+                if index == 1 { return node }
+                candidates.append(node)
+                if focused { focusedCandidates.append(node) }
+            case .container:
+                guard let next = children(node), depth < 24 || next.isEmpty else { return nil }
+                guard queue.count + next.count <= 256 else { return nil }
+                queue.append(contentsOf: next.map { ($0, depth + 1) })
+            }
+        }
+        if focusedCandidates.count == 1 { return focusedCandidates[0] }
+        return focusedCandidates.isEmpty && candidates.count == 1 ? candidates[0] : nil
+    }
 }

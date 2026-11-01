@@ -166,6 +166,11 @@ extension AppDelegate {
         let directResult = await service.insert("direct ", into: directTarget)
         if case .confirmed = directResult {} else { try require(false, "Direct insertion override was not confirmed") }
         print("PASS: direct insertion override")
+        preferences.set(.automatic, for: bundleID)
+        guard let automaticTarget = await service.captureTarget() else { try require(false, "Could not capture automatic target"); return }
+        let automaticResult = await service.insert("automatic ", into: automaticTarget)
+        if case .confirmed = automaticResult {} else { try require(false, "Automatic Accessibility insertion was not confirmed") }
+        print("PASS: automatic Accessibility insertion")
 
     }
 }

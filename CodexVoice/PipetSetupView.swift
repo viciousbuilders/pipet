@@ -11,7 +11,7 @@ struct PipetSetupView: View {
                     Spacer()
                     Text("\(model.readyCount) of 3 ready").font(.system(size: 12)).foregroundStyle(PipetTheme.secondary)
                 }
-                row(title: "Microphone", detail: model.microphoneReady ? "Pipet can hear you while you hold the shortcut." : "Only listens while you hold Right Command.", icon: "mic", ready: model.microphoneReady) {
+                row(title: "Microphone", detail: model.microphoneReady ? "Pipet can hear you while recording is on." : "Tap Right Command to start and stop listening.", icon: "mic", ready: model.microphoneReady) {
                     if model.requestingMicrophone {
                         ProgressView().controlSize(.small).accessibilityLabel("Requesting microphone access")
                     } else if !model.microphoneReady {
@@ -19,7 +19,7 @@ struct PipetSetupView: View {
                     }
                 }
                 Divider().overlay(PipetTheme.rule)
-                row(title: "Text insertion", detail: model.accessibilityReady ? "Your words can land in other apps." : "Enable Pipet in macOS Accessibility settings.", icon: "text.cursor", ready: model.accessibilityReady) {
+                row(title: "Accessibility", detail: model.accessibilityReady ? "Your words can land in other apps." : "Enable Pipet in macOS Accessibility settings.", icon: "text.cursor", ready: model.accessibilityReady) {
                     if !model.accessibilityReady {
                         Button("Enable") { model.allowAccessibility() }.buttonStyle(.bordered)
                     }

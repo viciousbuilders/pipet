@@ -2,70 +2,55 @@ import Carbon
 import AppKit
 import Foundation
 
-/// Distinguish the two Command keys and leave ordinary Command chords alone.
-/// Once interrupted, wait for a fresh press before starting another dictation.
+/// Recognize a standalone Right Command press/release, without consuming chords.
+/// Recording state belongs to DictationController so errors cannot desynchronize it.
 struct DictationHotkeyGesture {
-    enum Action: Equatable { case arm, release, cancel }
+    enum Action: Equatable { case toggle, cancel }
     private(set) var rightCommandDown = false
-    private var armed = false
-    private var recording = false
+    private var standalone = false
 
     mutating func flagsChanged(keyCode: UInt16, flags: NSEvent.ModifierFlags) -> Action? {
         let wasDown = rightCommandDown
         rightCommandDown = flags.rawValue & UInt(NX_DEVICERCMDKEYMASK) != 0
-        if !rightCommandDown {
-            armed = false
-            guard recording else { return nil }
-            recording = false
-            return .release
-        }
         let otherModifiers: NSEvent.ModifierFlags = [.shift, .control, .option, .function]
         let leftCommandDown = flags.rawValue & UInt(NX_DEVICELCMDKEYMASK) != 0
-        if !flags.intersection(otherModifiers).isEmpty || leftCommandDown {
-            return interrupt()
+        let hasOtherModifier = !flags.intersection(otherModifiers).isEmpty || leftCommandDown
+        if !rightCommandDown {
+            let shouldToggle = wasDown && standalone && !hasOtherModifier
+                && keyCode == UInt16(kVK_RightCommand)
+            standalone = false
+            return shouldToggle ? .toggle : nil
         }
-        guard !wasDown, keyCode == UInt16(kVK_RightCommand) else { return nil }
-        armed = true
-        return .arm
+        if hasOtherModifier {
+            standalone = false
+        } else if !wasDown && keyCode == UInt16(kVK_RightCommand) {
+            standalone = true
+        }
+        return nil
     }
 
-    mutating func keyDown() -> Action? { interrupt() }
-
-    mutating func activate() -> Bool {
-        guard armed, rightCommandDown else { return false }
-        armed = false
-        recording = true
-        return true
+    mutating func keyDown(keyCode: UInt16) -> Action? {
+        standalone = false
+        return keyCode == UInt16(kVK_Escape) ? .cancel : nil
     }
 
-    mutating func reset() -> Action? {
-        let action = interrupt()
+    mutating func reset() {
+        standalone = false
         rightCommandDown = false
-        return action
-    }
-
-    private mutating func interrupt() -> Action? {
-        armed = false
-        guard recording else { return nil }
-        recording = false
-        return .cancel
     }
 }
 
 @MainActor
 final class HotkeyMonitor {
-    private let onPress: () -> Void
-    private let onRelease: () -> Void
+    private let onToggle: () -> Void
     private let onCancel: () -> Void
     private var globalMonitor: Any?
     private var localMonitor: Any?
     private var workspaceObservers: [NSObjectProtocol] = []
-    private var pendingPress: Task<Void, Never>?
     private var gesture = DictationHotkeyGesture()
 
-    init(onPress: @escaping () -> Void, onRelease: @escaping () -> Void, onCancel: @escaping () -> Void) {
-        self.onPress = onPress
-        self.onRelease = onRelease
+    init(onToggle: @escaping () -> Void, onCancel: @escaping () -> Void) {
+        self.onToggle = onToggle
         self.onCancel = onCancel
     }
 
@@ -106,32 +91,16 @@ final class HotkeyMonitor {
     private func handle(_ event: NSEvent) {
         let action = event.type == .flagsChanged
             ? gesture.flagsChanged(keyCode: event.keyCode, flags: event.modifierFlags)
-            : gesture.keyDown()
-        pendingPress?.cancel()
-        pendingPress = nil
+            : gesture.keyDown(keyCode: event.keyCode)
         switch action {
-        case .arm:
-            // Briefly wait to distinguish a hold from shortcuts like Command-C.
-            pendingPress = Task { @MainActor [weak self] in
-                do { try await Task.sleep(for: .milliseconds(150)) }
-                catch { return }
-                guard let self else { return }
-                guard CGEventSource.keyState(.combinedSessionState, key: CGKeyCode(kVK_RightCommand)) else {
-                    self.reset()
-                    return
-                }
-                guard self.gesture.activate() else { return }
-                self.onPress()
-            }
-        case .release: onRelease()
+        case .toggle: onToggle()
         case .cancel: onCancel()
         case nil: break
         }
     }
 
     private func reset() {
-        pendingPress?.cancel()
-        pendingPress = nil
-        if gesture.reset() == .cancel { onCancel() }
+        gesture.reset()
+        onCancel()
     }
 }

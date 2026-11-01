@@ -29,12 +29,12 @@ final class StatusItemController {
     private func configureButton() {
         statusItem.button?.image = NSImage(systemSymbolName: "bubble.left.fill", accessibilityDescription: "Pipet")
         statusItem.button?.image?.isTemplate = true
-        statusItem.button?.toolTip = "Pipet. Hold Right Command to dictate."
+        statusItem.button?.toolTip = "Pipet. Tap Right Command to dictate."
     }
 
     private func configureMenu() {
         let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "Hold Right Command to dictate", action: nil, keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "Tap Right Command to dictate", action: nil, keyEquivalent: ""))
         menu.addItem(.separator())
         let copyItem = NSMenuItem(title: "Copy Last Transcript", action: #selector(copyLastTranscript), keyEquivalent: "")
         copyItem.target = self

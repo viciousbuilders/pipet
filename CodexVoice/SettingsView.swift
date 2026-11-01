@@ -75,7 +75,7 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Say it. See it typed.")
                     .font(.system(size: 26, weight: .semibold, design: .rounded))
-                Text("Click a text field in any app. Hold Right Command, speak, and release to insert your words. Press Esc while holding to cancel.")
+                Text("Click a text field in any app. Tap Right Command, speak, and tap it again to insert your words. Press Esc to cancel.")
                     .foregroundStyle(PipetTheme.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .lineSpacing(3)
@@ -97,7 +97,7 @@ struct SettingsView: View {
                 }
                 ZStack(alignment: .topLeading) {
                     if practice.isEmpty && !practiceFocused {
-                        Text("Click here, hold Right Command, and say something.")
+                        Text("Click here, tap Right Command, and say something.")
                             .foregroundStyle(PipetTheme.secondary)
                             .padding(.horizontal, 10).padding(.vertical, 10)
                             .allowsHitTesting(false)
@@ -107,7 +107,7 @@ struct SettingsView: View {
                         .scrollIndicators(.hidden)
                         .padding(5).focused($practiceFocused)
                         .accessibilityLabel("Practice dictation text")
-                        .accessibilityHint("Click here, then hold Right Command and speak. Release to insert the transcript.")
+                        .accessibilityHint("Click here, then tap Right Command and speak. Tap it again to insert the transcript.")
                 }
                 .frame(height: 100)
                 .background(PipetTheme.inset.opacity(0.5), in: RoundedRectangle(cornerRadius: 10))
@@ -128,7 +128,7 @@ struct SettingsView: View {
         case .starting:
             status("Starting your microphone…", symbol: "mic", color: PipetTheme.accent)
         case .recording:
-            status("Listening. Release Right Command to insert, or press Esc to cancel.", symbol: "waveform", color: PipetTheme.accent)
+            status("Listening. Tap Right Command again to insert, or press Esc to cancel.", symbol: "waveform", color: PipetTheme.accent)
         case .transcribing:
             status("Turning your voice into words…", symbol: "ellipsis.bubble", color: PipetTheme.accent)
         case .inserting:

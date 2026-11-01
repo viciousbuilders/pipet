@@ -23,10 +23,13 @@ BEFORE YOU DICTATE
   System Settings > Privacy & Security > Accessibility.
 
 DICTATE
-Click a text field. Hold Right Command, speak, and release.
-Press Esc while holding to cancel without sending audio.
-Use the Command key on the right of the space bar. Quick taps do nothing;
-other keys or modifiers cancel the recording, leaving normal shortcuts alone.
+Click a text field. Tap Right Command, speak, and tap it again.
+Press Esc to cancel without sending audio.
+Use the Command key on the right of the space bar. The first tap starts
+recording; the next tap stops and transcribes. Ordinary Command shortcuts
+do not toggle recording. Switching apps, locking or sleeping cancels it.
+T3 Code and Claude use Accessibility to find the editor and paste your
+words automatically; you do not need to press Command-V.
 Most editable text fields accept insertion. Secure fields and apps that
 block Accessibility or paste may require manual entry.
 Use Pipet's practice field to try it out.
@@ -46,7 +49,7 @@ turn it on. Reopen Pipet. This can happen after replacing a local build.
 
 PRIVACY
 The app reads your local Codex authentication to use your own account.
-Audio is sent to OpenAI after you release the shortcut.
+Audio is sent to OpenAI after you tap the shortcut a second time.
 Temporary recordings are deleted after each transcription attempt.
 The latest transcript stays in memory until you quit.
 No account credentials or recordings are bundled in this download.

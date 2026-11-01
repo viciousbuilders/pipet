@@ -48,6 +48,6 @@ struct ShortcutKeys: View {
             .frame(height: 34)
             .background(PipetTheme.surface, in: RoundedRectangle(cornerRadius: 8))
             .overlay(RoundedRectangle(cornerRadius: 8).stroke(PipetTheme.rule, lineWidth: 1))
-            .accessibilityLabel("Hold the right Command key to dictate")
+            .accessibilityLabel("Tap the right Command key to start or stop dictation")
     }
 }

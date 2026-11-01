@@ -81,8 +81,8 @@ private struct PipetHUD: View {
     private var presentation: (title: String, detail: String, busy: Bool, listening: Bool) {
         switch model.state {
         case .idle: ("Pipet", "Ready when you are", false, false)
-        case .starting: ("Getting ready", "Keep holding Right Command", true, false)
-        case .recording: ("I’m listening", "Release Right Command to type · Esc to cancel", false, true)
+        case .starting: ("Getting ready", "Tap Right Command again to cancel", true, false)
+        case .recording: ("I’m listening", "Tap Right Command again to type · Esc to cancel", false, true)
         case .transcribing: ("Finding your words", "Transcribing with your Codex account", true, false)
         case .inserting: ("Here come your words", "Inserting at your cursor", true, false)
         case .error(let message): ("Let’s try that again", message, false, false)

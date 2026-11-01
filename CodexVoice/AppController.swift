@@ -19,11 +19,8 @@ final class AppController {
         dictationController: dictationController
     )
     private lazy var hotkeyMonitor = HotkeyMonitor(
-        onPress: { [weak self] in
-            self?.dictationController.handleHotkeyPressed()
-        },
-        onRelease: { [weak self] in
-            self?.dictationController.handleHotkeyReleased()
+        onToggle: { [weak self] in
+            self?.dictationController.handleHotkeyToggle()
         },
         onCancel: { [weak self] in
             self?.dictationController.cancelRecording()

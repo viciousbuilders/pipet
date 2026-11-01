@@ -41,7 +41,7 @@ final class DictationController {
     }
 
     var onStateChange: ((State) -> Void)?
-    private var hotkeyHeld = false
+    private var recordingRequested = false
     private var recordingCancelled = false
     private var targetPID: pid_t?
     private var insertionTarget: TextInsertionService.Target?
@@ -59,7 +59,20 @@ final class DictationController {
         self.textInsertionService = textInsertionService
     }
 
-    func handleHotkeyPressed() {
+    func handleHotkeyToggle() {
+        switch state {
+        case .idle, .error:
+            startRecording()
+        case .starting:
+            cancelRecording()
+        case .recording:
+            stopRecording()
+        case .transcribing, .inserting:
+            break
+        }
+    }
+
+    private func startRecording() {
         switch state {
         case .starting, .recording, .transcribing, .inserting:
             DebugLogger.write("Hotkey press ignored because state=\(state.statusText)")
@@ -69,7 +82,7 @@ final class DictationController {
         }
 
         DebugLogger.write("Hotkey pressed")
-        hotkeyHeld = true
+        recordingRequested = true
         recordingCancelled = false
         targetPID = NSWorkspace.shared.frontmostApplication?.processIdentifier
         insertionTarget = nil
@@ -79,14 +92,15 @@ final class DictationController {
         }
     }
 
-    func handleHotkeyReleased() {
-        hotkeyHeld = false
+    private func stopRecording() {
+        recordingRequested = false
         guard case .recording = state else {
             DebugLogger.write("Hotkey release ignored because state=\(state.statusText)")
             return
         }
 
-        DebugLogger.write("Hotkey released")
+        DebugLogger.write("Recording stopped by second tap")
+        state = .transcribing
         Task { @MainActor in
             await finishDictation()
         }
@@ -97,11 +111,11 @@ final class DictationController {
         case .starting:
             // Keep starting occupied until beginDictation returns from its
             // pending permission/target work, so a new recording cannot race it.
-            hotkeyHeld = false
+            recordingRequested = false
             recordingCancelled = true
             audioCaptureService.cancel()
         case .recording:
-            hotkeyHeld = false
+            recordingRequested = false
             recordingCancelled = true
             audioCaptureService.cancel()
             insertionTarget = nil
@@ -114,7 +128,7 @@ final class DictationController {
     private func beginDictation() async {
         do {
             guard case .trusted = permissionCoordinator.accessibilityStatus(promptIfNeeded: false) else {
-                state = .error("Open Pipet and enable text insertion to get started.")
+                state = .error("Open Pipet and enable Accessibility to get started.")
                 return
             }
             let target = if let targetPID {
@@ -122,14 +136,14 @@ final class DictationController {
             } else {
                 nil as TextInsertionService.Target?
             }
-            guard hotkeyHeld, !recordingCancelled else { state = .idle; return }
+            guard recordingRequested, !recordingCancelled else { state = .idle; return }
             guard let target else {
-                state = .error("Click an editable field before holding Right Command. Secure fields are not supported.")
+                state = .error("Click an editable field before tapping Right Command. Secure fields are not supported.")
                 return
             }
             insertionTarget = target
             try await audioCaptureService.start()
-            guard hotkeyHeld else {
+            guard recordingRequested else {
                 audioCaptureService.cancel()
                 state = .idle
                 return
